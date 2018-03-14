@@ -38,13 +38,18 @@ import be.hyperrail.android.irail.contracts.OccupancyLevel;
 import be.hyperrail.android.irail.contracts.RouteTimeDefinition;
 import be.hyperrail.android.irail.db.Station;
 import be.hyperrail.android.irail.factories.IrailFactory;
-import be.hyperrail.android.irail.implementation.LinkedConnections.LinkedConnectionsOfflineCache;
+import be.hyperrail.android.irail.implementation.irailapi.LiveboardAppendHelper;
+import be.hyperrail.android.irail.implementation.irailapi.RouteAppendHelper;
+import be.hyperrail.android.irail.implementation.linkedconnections.LinkedConnectionsOfflineCache;
+import be.hyperrail.android.irail.implementation.requests.ExtendLiveboardRequest;
+import be.hyperrail.android.irail.implementation.requests.ExtendRoutesRequest;
 import be.hyperrail.android.irail.implementation.requests.IrailDisturbanceRequest;
 import be.hyperrail.android.irail.implementation.requests.IrailLiveboardRequest;
 import be.hyperrail.android.irail.implementation.requests.IrailPostOccupancyRequest;
 import be.hyperrail.android.irail.implementation.requests.IrailRouteRequest;
 import be.hyperrail.android.irail.implementation.requests.IrailRoutesRequest;
 import be.hyperrail.android.irail.implementation.requests.IrailVehicleRequest;
+import be.hyperrail.android.irail.implementation.requests.VehicleStopRequest;
 
 /**
  * This API loads linkedConnection data and builds responses based on this data
@@ -86,6 +91,15 @@ public class LinkedConnectionsApi implements IrailDataProvider {
         }
     }
 
+    @Override
+    public void extendLiveboard(@NonNull ExtendLiveboardRequest... requests) {
+        // TODO: switch to API specific code
+        for (ExtendLiveboardRequest request :
+                requests) {
+            (new LiveboardAppendHelper()).extendLiveboard(request);
+        }
+    }
+
     private void getLiveboard(@NonNull final IrailLiveboardRequest request) {
         LiveboardResponseListener listener = new LiveboardResponseListener(request);
         getLinkedConnectionsByDate(request.getSearchTime(),
@@ -95,15 +109,19 @@ public class LinkedConnectionsApi implements IrailDataProvider {
     }
 
     @Override
-    public void getLiveboardBefore(@NonNull IrailLiveboardRequest... request) {
-
-    }
-
-    @Override
     public void getRoutes(@NonNull IrailRoutesRequest... requests) {
+        // TODO: switch to API specific code
         for (IrailRoutesRequest request :
                 requests) {
             getRoutes(request);
+        }
+    }
+
+    @Override
+    public void extendRoutes(@NonNull ExtendRoutesRequest... requests) {
+        for (ExtendRoutesRequest request :
+                requests) {
+            (new RouteAppendHelper()).extendRoutesRequest(request);
         }
     }
 
@@ -127,19 +145,38 @@ public class LinkedConnectionsApi implements IrailDataProvider {
     }
 
     @Override
-    public void getRoute(@NonNull IrailRouteRequest... request) {
-
-    }
-
-    @Override
-    public void getTrain(@NonNull IrailVehicleRequest... requests) {
-        for (IrailVehicleRequest request :
+    public void getRoute(@NonNull IrailRouteRequest... requests) {
+        for (IrailRouteRequest request :
                 requests) {
-            getTrain(request);
+            getRoute(request);
         }
     }
 
-    public void getTrain(@NonNull final IrailVehicleRequest request) {
+    private void getRoute(@NonNull IrailRouteRequest requests) {
+        // TODO: implement
+    }
+
+    @Override
+    public void getStop(@NonNull VehicleStopRequest... requests) {
+        for (VehicleStopRequest request :
+                requests) {
+            getStop(request);
+        }
+    }
+
+    private void getStop(@NonNull VehicleStopRequest requests) {
+        // TODO: implement
+    }
+
+    @Override
+    public void getVehicle(@NonNull IrailVehicleRequest... requests) {
+        for (IrailVehicleRequest request :
+                requests) {
+            getVehicle(request);
+        }
+    }
+
+    private void getVehicle(@NonNull final IrailVehicleRequest request) {
         Log.i(LOGTAG, "Loading train...");
         VehicleResponseListener listener = new VehicleResponseListener(request);
         getLinkedConnectionsByDateForTimeSpan(request.getSearchTime().withTimeAtStartOfDay().withHourOfDay(3), request.getSearchTime().withTimeAtStartOfDay().plusDays(1).withHourOfDay(3), listener, listener, null);
@@ -379,6 +416,9 @@ public class LinkedConnectionsApi implements IrailDataProvider {
         String route, trip;
     }
 
+    /**
+     * A listener which receives graph.irail.be data and builds a liveboard for 2 hours.
+     */
     class LiveboardResponseListener implements IRailSuccessResponseListener<LinkedConnections>, IRailErrorResponseListener {
         final ArrayList<LinkedConnection> arrivals = new ArrayList<>();
         final ArrayList<LinkedConnection> departures = new ArrayList<>();
@@ -411,7 +451,6 @@ public class LinkedConnectionsApi implements IrailDataProvider {
             if (request.getTimeDefinition() == RouteTimeDefinition.DEPART && departures.size() > 20 || request.getTimeDefinition() == RouteTimeDefinition.ARRIVE && arrivals.size() > 20) {
                 VehicleStop[] stoparray = generateStopArray();
                 request.notifySuccessListeners(new LiveBoard(request.getStation(), stoparray, request.getSearchTime(), request.getTimeDefinition()));
-
             } else {
                 getLinkedConnectionByUrl(data.next,
                                          this,
@@ -561,7 +600,7 @@ public class LinkedConnectionsApi implements IrailDataProvider {
             LinkedConnection lastConnection = null;
             for (int i = 0; i < data.connections.length; i++) {
                 LinkedConnection connection = data.connections[i];
-                if (!Objects.equals(connection.route, "http://irail.be/vehicle/" + Vehicle.getTrainType(mRequest.getTrainId()) + Vehicle.getVehicleNumber(mRequest.getTrainId()))) {
+                if (!Objects.equals(connection.route, "http://irail.be/vehicle/" + Vehicle.getVehicleClass(mRequest.getVehicleId()) + Vehicle.getVehicleNumber(mRequest.getVehicleId()))) {
                     continue;
                 }
 
@@ -570,11 +609,11 @@ public class LinkedConnectionsApi implements IrailDataProvider {
 
                 if (stops.size() == 0) {
                     // First stop
-                    stops.add(VehicleStop.buildDepartureTrainstop(departure, direction, new VehicleStub(basename(connection.route), direction, connection.route), "?", true,
-                                                                  connection.departureTime,
-                                                                  Duration.standardSeconds(connection.departureDelay),
-                                                                  false, false,
-                                                                  connection.uri, OccupancyLevel.UNKNOWN));
+                    stops.add(VehicleStop.buildDepartureVehicleStop(departure, direction, new VehicleStub(basename(connection.route), direction, connection.route), "?", true,
+                                                                    connection.departureTime,
+                                                                    Duration.standardSeconds(connection.departureDelay),
+                                                                    false, false,
+                                                                    connection.uri, OccupancyLevel.UNKNOWN));
                 } else {
                     // Some stop during the journey
                     assert lastConnection != null;
@@ -594,15 +633,15 @@ public class LinkedConnectionsApi implements IrailDataProvider {
                 Station direction = IrailFactory.getStationsProviderInstance().getStationByName(lastConnection.direction);
 
                 // Arrival stop
-                stops.add(VehicleStop.buildArrivalTrainstop(arrival, direction, new VehicleStub(basename(lastConnection.route), direction, lastConnection.route),
-                                                            "?", true,
-                                                            lastConnection.arrivalTime,
-                                                            Duration.standardSeconds(lastConnection.arrivalDelay),
-                                                            false, false,
-                                                            lastConnection.uri, OccupancyLevel.UNKNOWN));
+                stops.add(VehicleStop.buildArrivalVehicleStop(arrival, direction, new VehicleStub(basename(lastConnection.route), direction, lastConnection.route),
+                                                              "?", true,
+                                                              lastConnection.arrivalTime,
+                                                              Duration.standardSeconds(lastConnection.arrivalDelay),
+                                                              false, false,
+                                                              lastConnection.uri, OccupancyLevel.UNKNOWN));
 
                 VehicleStop[] stopsArray = new VehicleStop[stops.size()];
-                mRequest.notifySuccessListeners(new Vehicle(stops.get(0).getTrain().getId(), lastConnection.route, stops.get(stops.size() - 1).getStation(), stops.get(0).getStation(), 0, 0, stops.toArray(stopsArray)));
+                mRequest.notifySuccessListeners(new Vehicle(stops.get(0).getVehicle().getId(), lastConnection.route, stops.get(stops.size() - 1).getStation(), stops.get(0).getStation(), 0, 0, stops.toArray(stopsArray)));
             }
         }
 
@@ -934,52 +973,22 @@ public class LinkedConnectionsApi implements IrailDataProvider {
                 // it will iterate over all legs
                 StationQuadruple it = quad;
                 List<RouteLeg> legs = new ArrayList<>();
-                List<Transfer> transfers = new ArrayList<>();
-
-                RouteLeg r = new RouteLeg(RouteLegType.TRAIN, new VehicleStub(basename(quad.departureConnection.route), mStationsProvider.getStationByName(quad.departureConnection.direction), quad.departureConnection.trip));
-                Transfer t = new Transfer(mRoutesRequest.getOrigin(),
-                                          null, null, "?", true, Duration.ZERO, false, true,
-                                          r, it.departureConnection.departureTime, "?", true, Duration.standardSeconds(quad.departureConnection.departureDelay), false, true,
-                                          it.departureConnection.uri, OccupancyLevel.UNKNOWN, TransferType.DEPARTURE);
-
-                legs.add(r);
-                transfers.add(t);
-
-                Transfer lastTransfer = t;
-                RouteLeg lastLeg = r;
 
                 while (!Objects.equals(it.arrivalConnection.arrivalStationUri, mRoutesRequest.getDestination().getSemanticId())) {
-                    StationQuadruple next = getFirstReachableConnection(it);
-
-                    r = new RouteLeg(RouteLegType.TRAIN, new VehicleStub(basename(next.departureConnection.route), mStationsProvider.getStationByName(next.departureConnection.direction), next.departureConnection.trip));
-                    if (!Objects.equals(it.arrivalConnection.arrivalStationUri, mRoutesRequest.getDestination().getSemanticId())) {
-                        t = new Transfer(mStationsProvider.getStationById(uriToId(it.arrivalConnection.arrivalStationUri)),
-                                         lastLeg, it.arrivalTime, "?", true, Duration.standardSeconds(it.arrivalConnection.arrivalDelay), false, true,
-                                         r, next.departureConnection.departureTime, "?", true, Duration.standardSeconds(quad.departureConnection.departureDelay), false, true,
-                                         next.departureConnection.uri, OccupancyLevel.UNKNOWN, TransferType.TRANSFER);
-                    } else {
-                        t = new Transfer(mStationsProvider.getStationById(uriToId(it.arrivalConnection.arrivalStationUri)),
-                                         lastLeg, it.arrivalTime, "?", true, Duration.standardSeconds(it.arrivalConnection.arrivalDelay), false, true,
-                                         null, null, "?", true, Duration.ZERO, false, true,
-                                         next.departureConnection.uri, OccupancyLevel.UNKNOWN, TransferType.ARRIVAL);
-                    }
-
+                    RouteLegEnd departure = new RouteLegEnd(mStationsProvider.getStationById(uriToId(it.departureConnection.departureStationUri)),
+                                                            it.departureConnection.departureTime, "?", true, Duration.standardSeconds(quad.departureConnection.departureDelay), false, true,
+                                                            it.departureConnection.uri, OccupancyLevel.UNSUPPORTED);
+                    RouteLegEnd arrival = new RouteLegEnd(mStationsProvider.getStationById(uriToId(it.arrivalConnection.arrivalStationUri)),
+                                                          it.arrivalConnection.arrivalTime, "?", true, Duration.standardSeconds(quad.arrivalConnection.arrivalDelay), false, true,
+                                                          it.arrivalConnection.arrivalStationUri, OccupancyLevel.UNSUPPORTED);
+                    RouteLeg r = new RouteLeg(RouteLegType.TRAIN, new VehicleStub(basename(quad.departureConnection.route), mStationsProvider.getStationByName(quad.departureConnection.direction), quad.departureConnection.trip), departure, arrival);
                     legs.add(r);
-                    transfers.add(t);
-                    lastLeg = r;
-                    lastTransfer = t;
 
-                    it = next;
+                    it = getFirstReachableConnection(it);
                 }
 
-                Transfer[] transferArray = new Transfer[transfers.size()];
                 RouteLeg[] legsArray = new RouteLeg[legs.size()];
-                routes[i++] = new Route(mRoutesRequest.getOrigin(), mRoutesRequest.getDestination(),
-                                        transfers.get(0).getDepartureTime().withZone(DateTimeZone.getDefault()), transfers.get(0).getDepartureDelay(), "?", true,
-                                        lastTransfer.getArrivalTime().withZone(DateTimeZone.getDefault()), lastTransfer.getArrivalDelay(), "?", true,
-                                        legs.toArray(legsArray), transfers.toArray(transferArray),
-                                        new Message[0], new Message[legs.size()][], new Message[0]);
-
+                routes[i++] = new Route(legsArray);
             }
 
             Arrays.sort(routes, new Comparator<Route>() {

@@ -1,4 +1,4 @@
-package be.hyperrail.android.irail.implementation.LinkedConnections;
+package be.hyperrail.android.irail.implementation.linkedconnections;
 
 import android.content.ContentValues;
 import android.content.Context;
