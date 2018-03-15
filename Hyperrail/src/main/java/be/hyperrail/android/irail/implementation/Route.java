@@ -30,7 +30,7 @@ public class Route implements Serializable {
     private Message[][] trainalerts;
     private Message[] remarks;
 
-    Route(RouteLeg[] legs) {
+    public Route(RouteLeg[] legs) {
         this.legs = legs;
 
         // Calculate transfers for easier access to the right data

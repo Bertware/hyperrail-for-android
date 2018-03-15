@@ -46,7 +46,7 @@ public class VehicleStop implements Serializable {
 
     private final VehicleStopType type;
 
-    protected VehicleStop(Station station, Station destination, VehicleStub train, String platform, boolean isPlatformNormal, DateTime departureTime, DateTime arrivalTime, Duration departureDelay, Duration arrivalDelay, boolean departureCanceled, boolean arrivalCanceled, boolean hasLeft, String departureSemanticId, OccupancyLevel occupancyLevel, VehicleStopType type) {
+    public VehicleStop(Station station, Station destination, VehicleStub train, String platform, boolean isPlatformNormal, DateTime departureTime, DateTime arrivalTime, Duration departureDelay, Duration arrivalDelay, boolean departureCanceled, boolean arrivalCanceled, boolean hasLeft, String departureSemanticId, OccupancyLevel occupancyLevel, VehicleStopType type) {
         this.station = station;
         this.destination = destination;
         this.isPlatformNormal = isPlatformNormal;
@@ -66,13 +66,13 @@ public class VehicleStop implements Serializable {
     }
 
 
-    protected static VehicleStop buildDepartureVehicleStop(Station station, Station destination, VehicleStub train, String platform, boolean isPlatformNormal, DateTime departureTime, Duration departureDelay, boolean departureCanceled, boolean hasLeft, String semanticDepartureConnection, OccupancyLevel occupancyLevel) {
+    public static VehicleStop buildDepartureVehicleStop(Station station, Station destination, VehicleStub train, String platform, boolean isPlatformNormal, DateTime departureTime, Duration departureDelay, boolean departureCanceled, boolean hasLeft, String semanticDepartureConnection, OccupancyLevel occupancyLevel) {
         return new VehicleStop(station, destination, train, platform, isPlatformNormal,
                                departureTime, null, departureDelay, null,
                                departureCanceled, departureCanceled, hasLeft, semanticDepartureConnection, occupancyLevel, VehicleStopType.DEPARTURE);
     }
 
-    protected static VehicleStop buildArrivalVehicleStop(Station station, Station destination, VehicleStub train, String platform, boolean isPlatformNormal, DateTime arrivalTime, Duration arrivalDelay, boolean arrivalCanceled, boolean hasLeft, String semanticDepartureConnection, OccupancyLevel occupancyLevel) {
+    public static VehicleStop buildArrivalVehicleStop(Station station, Station destination, VehicleStub train, String platform, boolean isPlatformNormal, DateTime arrivalTime, Duration arrivalDelay, boolean arrivalCanceled, boolean hasLeft, String semanticDepartureConnection, OccupancyLevel occupancyLevel) {
         return new VehicleStop(station, destination, train, platform, isPlatformNormal,
                                null, arrivalTime, null, arrivalDelay,
                                arrivalCanceled, arrivalCanceled, hasLeft, semanticDepartureConnection, occupancyLevel, VehicleStopType.ARRIVAL);

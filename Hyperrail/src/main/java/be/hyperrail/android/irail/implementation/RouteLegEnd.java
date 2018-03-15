@@ -45,7 +45,7 @@ public class RouteLegEnd implements Serializable {
     @Nullable
     private String uri;
 
-    protected RouteLegEnd(@NonNull Station station,
+    public RouteLegEnd(@NonNull Station station,
                        @NonNull DateTime time, @NonNull String platform, boolean normal, @NonNull Duration delay,
                        boolean canceled, boolean passed, @Nullable String semanticId,
                        @Nullable OccupancyLevel occupancy) {
