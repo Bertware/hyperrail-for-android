@@ -8,22 +8,13 @@ apply plugin: 'com.android.application'
 apply plugin: 'com.google.firebase.firebase-perf'
 apply plugin: 'com.google.firebase.firebase-crash'
 
-def VERSION_CODE = 21
-def VERSION_NAME = '0.9.18lc'
+
+def VERSION_CODE = 30
+def VERSION_NAME = '1.0.7-lc-0.9.0'
 
 android {
-    signingConfigs {
-        if (!System.getenv("RUNNING_ON_TRAVIS_CI")) {
-            production {
-                storeFile file(RELEASE_STORE_FILE)
-                storePassword RELEASE_STORE_PASSWORD
-                keyAlias RELEASE_KEY_ALIAS
-                keyPassword RELEASE_KEY_PASSWORD
-            }
-        }
-    }
     compileSdkVersion 27
-    buildToolsVersion '26.0.2'
+    buildToolsVersion '27.0.3'
     defaultConfig {
         applicationId "be.hyperrail.android"
         minSdkVersion 19
@@ -36,8 +27,12 @@ android {
     buildTypes {
         release {
             minifyEnabled true
+            shrinkResources true
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
             if (!System.getenv("RUNNING_ON_TRAVIS_CI")) signingConfig signingConfigs.production
+        }
+        debug {
+            minifyEnabled false
         }
     }
     compileOptions {
@@ -51,27 +46,27 @@ android {
 
 dependencies {
     implementation 'com.android.support.constraint:constraint-layout:1.0.2'
-    implementation 'com.google.android.gms:play-services-maps:11.8.0'
-    compile fileTree(include: ['*.jar'], dir: 'libs')
-    androidTestCompile('com.android.support.test.espresso:espresso-core:2.2.2', {
+    implementation 'com.google.android.gms:play-services-maps:12.0.1'
+    implementation fileTree(include: ['*.jar'], dir: 'libs')
+    androidTestImplementation('com.android.support.test.espresso:espresso-core:2.2.2', {
         exclude group: 'com.android.support', module: 'support-annotations'
     })
 
-    compile 'com.android.volley:volley:1.0.0'
-    compile 'joda-time:joda-time:2.9.4'
-    compile 'com.android.support:appcompat-v7:27.1.0'
-    compile 'com.android.support:support-v4:27.1.0'
-    compile 'com.android.support:cardview-v7:27.1.0'
-    compile 'com.android.support:recyclerview-v7:27.1.0'
-    compile 'com.android.support:design:27.1.0'
-    compile 'com.google.android.gms:play-services-location:11.8.0'
-    compile 'com.google.firebase:firebase-crash:11.8.0'
-    compile 'com.google.firebase:firebase-perf:11.8.0'
-    compile 'com.google.firebase:firebase-core:11.8.0'
-    testCompile 'junit:junit:4.12'
-    testCompile 'org.json:json:20160810'
+    implementation 'com.android.volley:volley:1.1.0'
+    implementation 'joda-time:joda-time:2.9.9'
+    implementation 'com.android.support:appcompat-v7:27.1.1'
+    implementation 'com.android.support:support-v4:27.1.1'
+    implementation 'com.android.support:cardview-v7:27.1.1'
+    implementation 'com.android.support:recyclerview-v7:27.1.1'
+    implementation 'com.android.support:design:27.1.1'
+    implementation 'com.google.android.gms:play-services-location:12.0.1'
+    implementation 'com.google.firebase:firebase-crash:12.0.1'
+    implementation 'com.google.firebase:firebase-perf:12.0.1'
+    implementation 'com.google.firebase:firebase-core:12.0.1'
+    testImplementation 'junit:junit:4.12'
+    testImplementation 'org.json:json:20160810'
     // org.json is included with Android, but Android.jar can not be used from unit tests
-    androidTestCompile 'com.android.support.test.espresso:espresso-contrib:2.2.2', {
+    androidTestImplementation 'com.android.support.test.espresso:espresso-contrib:2.2.2', {
         exclude group: 'com.android.support', module: 'support-annotations'
         exclude group: 'com.android.support', module: 'support-v4'
         exclude group: 'com.android.support', module: 'design'
