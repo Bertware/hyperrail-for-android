@@ -104,16 +104,20 @@ public class Lc2IrailParser {
     @NonNull
     private VehicleStop parseLiveboardStop(@NonNull IrailLiveboardRequest request, @NonNull JSONObject json) throws JSONException {
         /*
-          "arrivalDelay": 0,
-          "arrivalTime": "2018-04-13T15:21:00+02:00",
+        "arrivalDelay": 0,
+          "arrivalTime": "2018-04-15T23:01:00+02:00",
           "departureDelay": 0,
-          "departureTime": "2018-04-13T15:24:00+02:00",
-          "platform": "0",
-          "uri": "http://irail.be/connections/8841004/20180413/L5386",
+          "departureTime": "2018-04-15T23:06:00+02:00",
+          "hasArrived": false,
+          "hasDeparted": false,
+          "isArrivalCanceled": false,
+          "isDepartureCanceled": false,
+          "platform": "?",
+          "uri": "http://irail.be/connections/8841004/20180415/IC545",
           "vehicle": {
-            "uri": "http://irail.be/vehicle/L5386/20180413",
-            "id": "L5386",
-            "direction": "Hasselt"
+            "uri": "http://irail.be/vehicle/IC545/20180415",
+            "id": "IC545",
+            "direction": "Ostende"
           }
          */
 
@@ -124,22 +128,25 @@ public class Lc2IrailParser {
         String platform = "?";
         String uri = null;
         VehicleStub vehicle = null;
-        boolean hasLeft = false;
+        boolean hasDeparted = false;
+        boolean hasArrived = false;
 
         if (json.has("arrivalTime")) {
             arrivalTime = DateTime.parse(json.getString("arrivalTime"), dtf);
             arrivalDelay = json.getInt("arrivalDelay");
-            if (arrivalTime.plusSeconds(arrivalDelay).isBeforeNow()) {
-                hasLeft = true;
-            }
         }
         if (json.has("departureTime")) {
             departureTime = DateTime.parse(json.getString("departureTime"), dtf);
             departureDelay = json.getInt("departureDelay");
-            if (departureTime.plusSeconds(departureDelay).isBeforeNow()) {
-                hasLeft = true;
-            }
         }
+
+        if (json.has("hasDeparted")) {
+            hasDeparted = json.getBoolean("hasDeparted");
+        }
+        if (json.has("hasArrived")) {
+            hasArrived = json.getBoolean("hasArrived");
+        }
+
         if (json.has("platform")) {
             platform = json.getString("platform");
         }
@@ -165,6 +172,16 @@ public class Lc2IrailParser {
             type = VehicleStopType.ARRIVAL;
         }
 
+        boolean departureCanceled = false;
+        if (json.has("isDepartureCanceled")) {
+            departureCanceled = json.getBoolean("isDepartureCanceled");
+        }
+
+        boolean arrivalCanceled = false;
+        if (json.has("isArrivalCanceled")) {
+            arrivalCanceled = json.getBoolean("isArrivalCanceled");
+        }
+
         return new VehicleStop(request.getStation(),
                                vehicle.direction,
                                vehicle,
@@ -172,9 +189,9 @@ public class Lc2IrailParser {
                                true,
                                departureTime, arrivalTime, Duration.standardSeconds(departureDelay),
                                Duration.standardSeconds(arrivalDelay),
-                               false,
-                               false,
-                               hasLeft,
+                               departureCanceled,
+                               arrivalCanceled,
+                               hasDeparted,
                                uri,
                                OccupancyLevel.UNSUPPORTED,
                                type
@@ -217,20 +234,27 @@ public class Lc2IrailParser {
     private VehicleStop parseVehicleStop(@NonNull IrailVehicleRequest request, @NonNull JSONObject json, @NonNull VehicleStub vehicle, @NonNull VehicleStopType type) throws JSONException {
         /*
         {
-          "departureDelay": 0,
-          "departureTime": "2018-04-13T15:18:00+02:00",
-          "platform": "0",
-          "station": {
-            "id": "BE.NMBS.008844628",
-            "uri": "http://irail.be/stations/NMBS/008844628",
-            "defaultName": "Eupen",
-            "localizedName": "Eupen",
-            "latitude": "50.635157",
-            "longitude": "6.03711",
-            "countryCode": "be",
-            "countryURI": "http://sws.geonames.org/2802361/"
-          },
-          "uri": "http://irail.be/connections/8844628/20180413/IC538"
+              "arrivalDelay": 0,
+              "arrivalTime": "2018-04-13T15:25:00+02:00",
+              "departureDelay": 0,
+              "departureTime": "2018-04-13T15:26:00+02:00",
+              "hasArrived": true,
+              "hasDeparted": true,
+              "isArrivalCanceled": false,
+              "isDepartureCanceled": false,
+              "platform": "?",
+              "station": {
+                "hid": "008844503",
+                "uicCode": "8844503",
+                "uri": "http://irail.be/stations/NMBS/008844503",
+                "defaultName": "Welkenraedt",
+                "localizedName": "Welkenraedt",
+                "latitude": "50.659707",
+                "longitude": "5.975381",
+                "countryCode": "be",
+                "countryURI": "http://sws.geonames.org/2802361/"
+              },
+              "uri": "http://irail.be/connections/8844503/20180413/IC538"
         },
         */
 
@@ -240,28 +264,43 @@ public class Lc2IrailParser {
         DateTime arrivalTime = null;
         String platform = "?";
         String uri = null;
-        boolean hasLeft = false;
+        boolean hasArrived = false;
+        boolean hasDeparted = false;
+        boolean isDepartureCanceled = false;
+        boolean isArrivalCanceled = false;
+        // TODO: parse isPlatformNormal from response
+        boolean isPlatformNormal = true;
 
         Station station = stationProvider.getStationByUri(json.getJSONObject("station").getString("uri"));
 
         if (json.has("arrivalTime")) {
             arrivalTime = DateTime.parse(json.getString("arrivalTime"), dtf);
             arrivalDelay = json.getInt("arrivalDelay");
-            if (arrivalTime.plusSeconds(arrivalDelay).isBeforeNow()) {
-                hasLeft = true;
-            }
         }
 
         if (json.has("departureTime")) {
             departureTime = DateTime.parse(json.getString("departureTime"), dtf);
             departureDelay = json.getInt("departureDelay");
-            if (departureTime.plusSeconds(departureDelay).isBeforeNow()) {
-                hasLeft = true;
-            }
         }
 
         if (json.has("platform")) {
             platform = json.getString("platform");
+        }
+
+        if (json.has("hasDeparted")) {
+            hasDeparted = json.getBoolean("hasDeparted");
+        }
+
+        if (json.has("hasArrived")) {
+            hasArrived = json.getBoolean("hasArrived");
+        }
+
+        if (json.has("isDepartureCanceled")) {
+            isDepartureCanceled = json.getBoolean("isDepartureCanceled");
+        }
+
+        if (json.has("isArrivalCanceled")) {
+            isArrivalCanceled = json.getBoolean("isArrivalCanceled");
         }
 
         if (json.has("uri")) {
@@ -272,12 +311,12 @@ public class Lc2IrailParser {
                                vehicle.direction,
                                vehicle,
                                platform,
-                               true,
+                               isPlatformNormal,
                                departureTime, arrivalTime, Duration.standardSeconds(departureDelay),
                                Duration.standardSeconds(arrivalDelay),
-                               false,
-                               false,
-                               hasLeft,
+                               isDepartureCanceled,
+                               isArrivalCanceled,
+                               hasDeparted,
                                uri,
                                OccupancyLevel.UNSUPPORTED,
                                type
@@ -286,8 +325,8 @@ public class Lc2IrailParser {
 
     @NonNull
     public RouteResult parseRoutes(@NonNull IrailRoutesRequest request, @NonNull JSONObject json) throws JSONException {
-        Station origin = stationProvider.getStationByUri(json.getJSONObject("station").getString("uri"));
-        Station destination = stationProvider.getStationByUri(json.getJSONObject("station").getString("uri"));
+        Station origin = stationProvider.getStationByUri(json.getJSONObject("departureStation").getString("uri"));
+        Station destination = stationProvider.getStationByUri(json.getJSONObject("destination").getString("uri"));
 
         JSONArray connections = json.getJSONArray("connections");
         Route[] routes = new Route[connections.length()];
@@ -309,50 +348,60 @@ public class Lc2IrailParser {
     private Route parseConnection(@NonNull IrailRoutesRequest request, @NonNull JSONObject json) throws JSONException {
         /*
           "legs": [
-            {
-              "arrivalConnection": "http://irail.be/connections/8813003/20180415/IC541",
-              "arrivalDelay": 0,
-              "arrivalStation": {
-                "id": "BE.NMBS.008814001",
-                "uri": "http://irail.be/stations/NMBS/008814001",
-                "defaultName": "Brussel-Zuid/Bruxelles-Midi",
-                "localizedName": "Brussels-South/Brussels-Midi",
-                "latitude": "50.835707",
-                "longitude": "4.336531",
-                "countryCode": "be",
-                "countryURI": "http://sws.geonames.org/2802361/"
-              },
-              "arrivalTime": "2018-04-15T18:00:00+00:00",
-              "departureConnection": "http://irail.be/connections/8841004/20180415/IC541",
-              "departureDelay": 0,
-              "departureStation": {
-                "id": "BE.NMBS.008841004",
-                "uri": "http://irail.be/stations/NMBS/008841004",
-                "defaultName": "Liège-Guillemins",
-                "localizedName": "Liège-Guillemins",
-                "latitude": "50.62455",
-                "longitude": "5.566695",
-                "countryCode": "be",
-                "countryURI": "http://sws.geonames.org/2802361/"
-              },
+                {
+                  "arrivalDelay": 0,
+                  "arrivalPlatform": "?",
+                  "arrivalStation": {
+                    "hid": "008814001",
+                    "uicCode": "8814001",
+                    "uri": "http://irail.be/stations/NMBS/008814001",
+                    "defaultName": "Brussel-Zuid/Bruxelles-Midi",
+                    "localizedName": "Brussels-South/Brussels-Midi",
+                    "latitude": "50.835707",
+                    "longitude": "4.336531",
+                    "countryCode": "be",
+                    "countryURI": "http://sws.geonames.org/2802361/"
+                  },
+                  "arrivalTime": "2018-04-15T18:00:00+00:00",
+                  "arrivalUri": "http://irail.be/connections/8813003/20180415/IC541",
+                  "departureDelay": 0,
+                  "departurePlatform": "?",
+                  "departureStation": {
+                    "hid": "008841004",
+                    "uicCode": "8841004",
+                    "uri": "http://irail.be/stations/NMBS/008841004",
+                    "defaultName": "Liège-Guillemins",
+                    "localizedName": "Liège-Guillemins",
+                    "latitude": "50.62455",
+                    "longitude": "5.566695",
+                    "countryCode": "be",
+                    "countryURI": "http://sws.geonames.org/2802361/"
+                  },
+                  "departureTime": "2018-04-15T17:01:00+00:00",
+                  "departureUri": "http://irail.be/connections/8841004/20180415/IC541",
+                  "direction": "Ostende",
+                  "hasArrived": true,
+                  "hasLeft": true,
+                  "isArrivalCanceled": false,
+                  "isArrivalPlatformNormal": true,
+                  "isDepartureCanceled": false,
+                  "isDeparturePlatformNormal": true,
+                  "route": "IC541",
+                  "trip": "http://irail.be/vehicle/IC541/20180415"
+                }
+              ],
               "departureTime": "2018-04-15T17:01:00+00:00",
-              "direction": "Ostende",
-              "route": "IC541",
-              "trip": "http://irail.be/vehicle/IC541/20180415"
-            }
-          ],
-          "departureTime": "2018-04-15T17:01:00+00:00",
-          "arrivalTime": "2018-04-15T18:00:00+00:00"
-        },
+              "arrivalTime": "2018-04-15T18:00:00+00:00"
+            },
          */
         JSONArray jsonlegs = json.getJSONArray("legs");
         RouteLeg[] legs = new RouteLeg[jsonlegs.length()];
         for (int i = 0; i < jsonlegs.length(); i++) {
             JSONObject jsonLeg = jsonlegs.getJSONObject(i);
             VehicleStub vehicle = new VehicleStub(
-                    jsonLeg.getJSONObject("vehicle").getString("id"),
-                    stationProvider.getStationByName(jsonLeg.getJSONObject("vehicle").getString("direction")),
-                    jsonLeg.getJSONObject("vehicle").getString("uri")
+                    jsonLeg.getString("route"),
+                    stationProvider.getStationByName(jsonLeg.getString("direction")),
+                    jsonLeg.getString("trip")
             );
 
             Station departureStation = stationProvider.getStationByUri(jsonLeg.getJSONObject("departureStation").getString("uri"));
@@ -364,24 +413,52 @@ public class Lc2IrailParser {
 
             DateTime departureTime = DateTime.parse(jsonLeg.getString("departureTime"), dtf);
             int departureDelay = jsonLeg.getInt("departureDelay");
+
+            boolean isDepartureCanceled = false;
+            if (jsonLeg.has("isDepartureCanceled")) {
+                isDepartureCanceled = jsonLeg.getBoolean("isDepartureCanceled");
+            }
+            boolean isDeparturePlatformNormal = true;
+            if (jsonLeg.has("isDeparturePlatformNormal")) {
+                isDeparturePlatformNormal = jsonLeg.getBoolean("isDeparturePlatformNormal");
+            }
+            boolean hasDeparted = false;
+            if (jsonLeg.has("hasLeft")) {
+                hasDeparted = jsonLeg.getBoolean("hasLeft");
+            }
+
             RouteLegEnd departure = new RouteLegEnd(departureStation,
                                                     departureTime,
-                                                    "?",
-                                                    true,
+                                                    jsonLeg.getString("departurePlatform"),
+                                                    isDeparturePlatformNormal,
                                                     Duration.standardSeconds(departureDelay),
-                                                    false,
-                                                    departureTime.plusSeconds(departureDelay).isBeforeNow(),
+                                                    isDepartureCanceled,
+                                                    hasDeparted,
                                                     jsonLeg.getString("departureUri"),
                                                     OccupancyLevel.UNSUPPORTED);
+
+            boolean isArrivalCanceled = false;
+            if (jsonLeg.has("isArrivalCanceled")) {
+                isArrivalCanceled = jsonLeg.getBoolean("isArrivalCanceled");
+            }
+            boolean isArrivalPlatformNormal = true;
+            if (jsonLeg.has("isArrivalPlatformNormal")) {
+                isArrivalPlatformNormal = jsonLeg.getBoolean("isArrivalPlatformNormal");
+            }
+            boolean hasArrived = false;
+            if (jsonLeg.has("hasArrived")) {
+                hasArrived = jsonLeg.getBoolean("hasArrived");
+            }
             DateTime arrivalTime = DateTime.parse(jsonLeg.getString("arrivalTime"), dtf);
             int arrivalDelay = jsonLeg.getInt("arrivalDelay");
+
             RouteLegEnd arrival = new RouteLegEnd(arrivalStation,
                                                   arrivalTime,
-                                                  "?",
-                                                  true,
+                                                  jsonLeg.getString("arrivalPlatform"),
+                                                  isArrivalPlatformNormal,
                                                   Duration.standardSeconds(arrivalDelay),
-                                                  false,
-                                                  arrivalTime.plusSeconds(arrivalDelay).isBeforeNow(),
+                                                  isArrivalCanceled,
+                                                  hasArrived,
                                                   jsonLeg.getString("arrivalUri"),
                                                   OccupancyLevel.UNSUPPORTED);
 

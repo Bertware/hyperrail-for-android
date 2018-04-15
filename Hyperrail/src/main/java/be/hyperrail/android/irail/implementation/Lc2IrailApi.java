@@ -4,6 +4,7 @@ import android.content.Context;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.support.annotation.NonNull;
+import android.util.Log;
 
 import com.android.volley.DefaultRetryPolicy;
 import com.android.volley.NoConnectionError;
@@ -16,6 +17,7 @@ import com.android.volley.toolbox.Volley;
 import com.google.firebase.crash.FirebaseCrash;
 
 import org.joda.time.DateTime;
+import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
 import org.joda.time.format.ISODateTimeFormat;
 import org.json.JSONException;
@@ -51,6 +53,7 @@ import static java.util.logging.Level.WARNING;
 public class Lc2IrailApi implements IrailDataProvider {
 
     private static final String UA = "HyperRail for Android - " + BuildConfig.VERSION_NAME;
+    private static final String LOGTAG = "Lc2IrailApi";
 
     private final Context mContext;
     private final Lc2IrailParser parser;
@@ -90,12 +93,17 @@ public class Lc2IrailApi implements IrailDataProvider {
     private void getLiveboard(@NonNull final IrailLiveboardRequest request) {
         // https://api.irail.be/connections/?to=Halle&from=Brussels-south&date={dmy}&time=2359&timeSel=arrive or depart&format=json
         DateTimeFormatter fmt = ISODateTimeFormat.dateTimeNoMillis();
-
-        // https://lc2irail.thesis.bertmarcelis.be/liveboard/008841004/2018-04-13T13:13:47+00:00
-        String url = "https://lc2irail.thesis.bertmarcelis.be/liveboard/"
-                + request.getStation().getId().substring(8) + "/"
-                + fmt.print(request.getSearchTime());
-
+        String url;
+        // https://lc2irail.thesis.bertmarcelis.be/liveboard/008841004/after/2018-04-13T13:13:47+00:00
+        if (request.getTimeDefinition() == RouteTimeDefinition.ARRIVE_AT) {
+            url = "https://lc2irail.thesis.bertmarcelis.be/liveboard/"
+                    + request.getStation().getId().substring(8) + "/before/"
+                    + fmt.print(request.getSearchTime());
+        } else {
+            url = "https://lc2irail.thesis.bertmarcelis.be/liveboard/"
+                    + request.getStation().getId().substring(8) + "/after/"
+                    + fmt.print(request.getSearchTime());
+        }
         Response.Listener<JSONObject> successListener = new Response.Listener<JSONObject>() {
             @Override
             public void onResponse(JSONObject response) {
@@ -105,6 +113,7 @@ public class Lc2IrailApi implements IrailDataProvider {
                 } catch (Exception e) {
                     FirebaseCrash.logcat(
                             WARNING.intValue(), "Failed to parse liveboard", e.getMessage());
+                    Log.w(LOGTAG, "Failed to parse liveboard", e);
                     FirebaseCrash.report(e);
                     request.notifyErrorListeners(e);
                     return;
@@ -262,7 +271,7 @@ public class Lc2IrailApi implements IrailDataProvider {
     }
 
     public void getVehicle(@NonNull final IrailVehicleRequest request) {
-        DateTimeFormatter fmt = ISODateTimeFormat.dateTimeNoMillis();
+        DateTimeFormatter fmt = DateTimeFormat.forPattern("YYYYMMdd");
 
         // https://lc2irail.thesis.bertmarcelis.be/vehicle/IC538/20180413
         String url = "https://lc2irail.thesis.bertmarcelis.be/vehicle/"
