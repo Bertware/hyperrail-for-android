@@ -53,7 +53,6 @@ public class Lc2IrailApi implements IrailDataProvider {
     private static final String UA = "HyperRail for Android - " + BuildConfig.VERSION_NAME;
 
     private final Context mContext;
-    private final IrailStationProvider mStationsProvider;
     private final Lc2IrailParser parser;
     private final RequestQueue requestQueue;
     private final DefaultRetryPolicy requestPolicy;
@@ -63,8 +62,8 @@ public class Lc2IrailApi implements IrailDataProvider {
 
     public Lc2IrailApi(Context context) {
         this.mContext = context;
-        this.mStationsProvider = IrailFactory.getStationsProviderInstance();
-        this.parser = new Lc2IrailParser(mStationsProvider);
+        IrailStationProvider stationsProvider = IrailFactory.getStationsProviderInstance();
+        this.parser = new Lc2IrailParser(stationsProvider);
         this.requestQueue = Volley.newRequestQueue(context);
         this.requestPolicy = new DefaultRetryPolicy(
                 1500,
@@ -162,9 +161,9 @@ public class Lc2IrailApi implements IrailDataProvider {
         Response.Listener<JSONObject> successListener = new Response.Listener<JSONObject>() {
             @Override
             public void onResponse(JSONObject response) {
-                RouteResult routeResult = null;
+                RouteResult routeResult;
                 try {
-                    // parse
+                    routeResult = parser.parseRoutes(request, response);
                 } catch (Exception e) {
                     FirebaseCrash.logcat(
                             WARNING.intValue(), "Failed to parse routes", e.getMessage());
@@ -273,9 +272,9 @@ public class Lc2IrailApi implements IrailDataProvider {
         Response.Listener<JSONObject> successListener = new Response.Listener<JSONObject>() {
             @Override
             public void onResponse(JSONObject response) {
-                Vehicle vehicle = null;
+                Vehicle vehicle;
                 try {
-                    // parse
+                    vehicle = parser.parseVehicle(request, response);
                 } catch (Exception e) {
                     FirebaseCrash.logcat(
                             WARNING.intValue(), "Failed to parse vehicle", e.getMessage());
