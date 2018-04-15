@@ -7,7 +7,7 @@ import be.hyperrail.android.irail.implementation.LinkedConnectionsApi;
  */
 
 
-class LinkedConnections {
+public class LinkedConnections {
     String current, previous, next;
     LinkedConnection[] connections = new LinkedConnection[0];
 }

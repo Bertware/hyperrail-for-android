@@ -53,14 +53,11 @@ public class LiveboardResponseListener implements IRailSuccessResponseListener<L
     @Override
     public void onSuccessResponse(@NonNull LinkedConnections data, Object tag) {
 
-        for (LinkedConnection connection : data.connections
-                ) {
-            if (Objects.equals(connection.departureStationUri,
-                               request.getStation().getSemanticId())) {
+        for (LinkedConnection connection : data.connections) {
+            if (connection.departureStationUri.equals(request.getStation().getSemanticId())) {
                 departures.add(connection);
             }
-            if (Objects.equals(connection.arrivalStationUri,
-                               request.getStation().getSemanticId())) {
+            if (connection.arrivalStationUri.equals(request.getStation().getSemanticId())) {
                 arrivals.add(connection);
                 departureIndexForArrivals.add(departures.size());
             }
@@ -76,14 +73,14 @@ public class LiveboardResponseListener implements IRailSuccessResponseListener<L
                 link = data.previous;
             }
             mLinkedConnectionsProvider.getLinkedConnectionByUrl(link,
-                                     this,
-                                     new IRailErrorResponseListener() {
-                                         @Override
-                                         public void onErrorResponse(@NonNull Exception e, Object tag) {
-                                             Log.w("LiveboardResponseLstnr", "Getting next LC page failed");
-                                         }
-                                     },
-                                     tag);
+                                                                this,
+                                                                new IRailErrorResponseListener() {
+                                                                    @Override
+                                                                    public void onErrorResponse(@NonNull Exception e, Object tag) {
+                                                                        Log.w("LiveboardResponseLstnr", "Getting next LC page failed");
+                                                                    }
+                                                                },
+                                                                tag);
         }
 
     }

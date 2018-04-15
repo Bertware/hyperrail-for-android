@@ -10,7 +10,7 @@ apply plugin: 'com.google.firebase.firebase-crash'
 
 
 def VERSION_CODE = 30
-def VERSION_NAME = '1.0.7-lc-0.9.0'
+def VERSION_NAME = 'Research-LC-0.9.0-HR1.0.7#30'
 
 android {
     compileSdkVersion 27
@@ -29,7 +29,6 @@ android {
             minifyEnabled true
             shrinkResources true
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
-            if (!System.getenv("RUNNING_ON_TRAVIS_CI")) signingConfig signingConfigs.production
         }
         debug {
             minifyEnabled false

@@ -26,7 +26,6 @@ import be.hyperrail.android.irail.implementation.VehicleStub;
 import be.hyperrail.android.irail.implementation.requests.IrailRoutesRequest;
 
 import static be.hyperrail.android.irail.implementation.LinkedConnectionsApi.basename;
-import static be.hyperrail.android.irail.implementation.LinkedConnectionsApi.uriToId;
 
 /**
  * Created in be.hyperrail.android.irail.implementation.linkedconnections on 15/03/2018.
@@ -359,10 +358,10 @@ public class RouteResponseListener implements IRailSuccessResponseListener<Linke
             List<RouteLeg> legs = new ArrayList<>();
 
             while (!Objects.equals(it.arrivalConnection.arrivalStationUri, mRoutesRequest.getDestination().getSemanticId())) {
-                RouteLegEnd departure = new RouteLegEnd(mStationProvider.getStationById(uriToId(it.departureConnection.departureStationUri)),
+                RouteLegEnd departure = new RouteLegEnd(mStationProvider.getStationByUri(it.departureConnection.departureStationUri),
                                                         it.departureConnection.departureTime, "?", true, Duration.standardSeconds(quad.departureConnection.departureDelay), false, it.departureConnection.getDelayedDepartureTime().isAfterNow(),
                                                         it.departureConnection.uri, OccupancyLevel.UNSUPPORTED);
-                RouteLegEnd arrival = new RouteLegEnd(mStationProvider.getStationById(uriToId(it.arrivalConnection.arrivalStationUri)),
+                RouteLegEnd arrival = new RouteLegEnd(mStationProvider.getStationByUri(it.arrivalConnection.arrivalStationUri),
                                                       it.arrivalConnection.arrivalTime, "?", true, Duration.standardSeconds(quad.arrivalConnection.arrivalDelay), false, it.arrivalConnection.getDelayedArrivalTime().isAfterNow(),
                                                       it.arrivalConnection.arrivalStationUri, OccupancyLevel.UNSUPPORTED);
                 RouteLeg r = new RouteLeg(RouteLegType.TRAIN, new VehicleStub(basename(quad.departureConnection.route), mStationProvider.getStationByName(quad.departureConnection.direction), quad.departureConnection.trip), departure, arrival);

@@ -45,6 +45,8 @@ public class LinkedConnectionsProvider {
     private final RequestQueue requestQueue;
     private final RetryPolicy requestPolicy;
     private final ConnectivityManager mConnectivityManager;
+    
+    private boolean mCacheEnabled = true;
 
     private static final String UA = "HyperRail for Android - " + BuildConfig.VERSION_NAME;
 
@@ -210,7 +212,7 @@ public class LinkedConnectionsProvider {
             }
         };
 
-        jsObjRequest.setShouldCache(true);
+        jsObjRequest.setShouldCache(mCacheEnabled);
         jsObjRequest.setRetryPolicy(requestPolicy);
         //Log.i(LOGTAG, "Cached? " + url + ": " + (requestQueue.getCache().get(url) == null ? "empty" : (requestQueue.getCache().get(url).isExpired() ? "expired" : "valid")));
         requestQueue.add(jsObjRequest);
@@ -274,4 +276,7 @@ public class LinkedConnectionsProvider {
         return result;
     }
 
+    public void setCacheEnabled(boolean cacheEnabled) {
+        mCacheEnabled = cacheEnabled;
+    }
 }

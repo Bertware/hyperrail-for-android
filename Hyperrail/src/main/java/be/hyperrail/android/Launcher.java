@@ -24,9 +24,10 @@ public class Launcher extends android.app.Application {
     public void onCreate() {
         // Setup the factory as soon as the app is created.
         IrailFactory.setup(getApplicationContext());
-        if (BuildConfig.DEBUG) {
-            FirebaseCrash.setCrashCollectionEnabled(false);
-        }
+        //if (BuildConfig.DEBUG) {
+        // This is a research version, which shouldn't be included in the production statistics
+        FirebaseCrash.setCrashCollectionEnabled(false);
+        //}
         super.onCreate();
     }
 

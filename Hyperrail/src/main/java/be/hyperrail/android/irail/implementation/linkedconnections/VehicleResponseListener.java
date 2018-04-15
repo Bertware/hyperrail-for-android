@@ -22,7 +22,6 @@ import be.hyperrail.android.irail.implementation.VehicleStub;
 import be.hyperrail.android.irail.implementation.requests.IrailVehicleRequest;
 
 import static be.hyperrail.android.irail.implementation.LinkedConnectionsApi.basename;
-import static be.hyperrail.android.irail.implementation.LinkedConnectionsApi.uriToId;
 
 /**
  * Created in be.hyperrail.android.irail.implementation.linkedconnections on 15/03/2018.
@@ -50,7 +49,7 @@ public class VehicleResponseListener implements IRailSuccessResponseListener<Lin
                 continue;
             }
 
-            Station departure = mStationProvider.getStationById(uriToId(connection.departureStationUri));
+            Station departure = mStationProvider.getStationByUri(connection.departureStationUri);
             Station direction = mStationProvider.getStationByName(connection.direction);
 
             if (stops.size() == 0) {
@@ -75,7 +74,7 @@ public class VehicleResponseListener implements IRailSuccessResponseListener<Lin
         }
 
         if (stops.size() > 0 && lastConnection != null) {
-            Station arrival = IrailFactory.getStationsProviderInstance().getStationById("BE.NMBS." + lastConnection.arrivalStationUri.substring(lastConnection.arrivalStationUri.lastIndexOf('/') + 1));
+            Station arrival = IrailFactory.getStationsProviderInstance().getStationByUri(lastConnection.arrivalStationUri);
             Station direction = IrailFactory.getStationsProviderInstance().getStationByName(lastConnection.direction);
 
             // Arrival stop

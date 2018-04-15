@@ -20,6 +20,7 @@ import com.google.firebase.perf.metrics.AddTrace;
 import be.hyperrail.android.irail.contracts.IrailDataProvider;
 import be.hyperrail.android.irail.contracts.IrailStationProvider;
 import be.hyperrail.android.irail.db.StationsDb;
+import be.hyperrail.android.irail.implementation.Lc2IrailApi;
 import be.hyperrail.android.irail.implementation.LinkedConnectionsApi;
 
 import static java.util.logging.Level.SEVERE;
@@ -36,7 +37,7 @@ public class IrailFactory {
     @AddTrace(name = "IrailFactory.setup")
     public static void setup(Context applicationContext) {
         stationProviderInstance = new StationsDb(applicationContext);
-        dataProviderInstance = new LinkedConnectionsApi(applicationContext);
+        dataProviderInstance = new Lc2IrailApi(applicationContext);
     }
 
     public static IrailStationProvider getStationsProviderInstance() {

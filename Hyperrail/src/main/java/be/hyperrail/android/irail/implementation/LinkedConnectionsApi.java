@@ -7,6 +7,7 @@ import android.util.Log;
 import org.joda.time.DateTime;
 
 import be.hyperrail.android.BuildConfig;
+import be.hyperrail.android.irail.contracts.IRailErrorResponseListener;
 import be.hyperrail.android.irail.contracts.IRailSuccessResponseListener;
 import be.hyperrail.android.irail.contracts.IrailDataProvider;
 import be.hyperrail.android.irail.contracts.IrailStationProvider;
@@ -27,6 +28,7 @@ import be.hyperrail.android.irail.implementation.requests.IrailRoutesRequest;
 import be.hyperrail.android.irail.implementation.requests.IrailVehicleRequest;
 import be.hyperrail.android.irail.implementation.requests.VehicleStopRequest;
 
+import static be.hyperrail.android.irail.implementation.Liveboard.LiveboardType.ARRIVALS;
 import static be.hyperrail.android.irail.implementation.Liveboard.LiveboardType.DEPARTURES;
 
 /**
@@ -59,6 +61,14 @@ public class LinkedConnectionsApi implements IrailDataProvider {
                 requests) {
             getLiveboard(request);
         }
+    }
+
+    private void getLiveboard(@NonNull final IrailLiveboardRequest request) {
+        LiveboardResponseListener listener = new LiveboardResponseListener(mLinkedConnectionsProvider, mStationsProvider, request);
+        mLinkedConnectionsProvider.getLinkedConnectionsByDate(request.getSearchTime(),
+                                                              listener,
+                                                              listener,
+                                                              request.getTag());
     }
 
     @Override
@@ -97,14 +107,6 @@ public class LinkedConnectionsApi implements IrailDataProvider {
                 }
             }, request.getOnErrorListener(), null);
         }
-    }
-
-    private void getLiveboard(@NonNull final IrailLiveboardRequest request) {
-        LiveboardResponseListener listener = new LiveboardResponseListener(mLinkedConnectionsProvider, mStationsProvider, request);
-        mLinkedConnectionsProvider.getLinkedConnectionsByDate(request.getSearchTime(),
-                                                              listener,
-                                                              listener,
-                                                              request.getTag());
     }
 
     @Override
@@ -151,8 +153,32 @@ public class LinkedConnectionsApi implements IrailDataProvider {
         }
     }
 
-    private void getRoute(@NonNull IrailRouteRequest requests) {
-        // TODO: implement
+    private void getRoute(@NonNull final IrailRouteRequest request) {
+        IrailRoutesRequest routesRequest = new IrailRoutesRequest(
+                request.getOrigin(), request.getDestination(), request.getTimeDefinition(),
+                request.getSearchTime()
+        );
+
+        // Create a new routerequest. A successful response will be iterated to find a matching route. An unsuccessful query will cause the original error handler to be called.
+        routesRequest.setCallback(new IRailSuccessResponseListener<RouteResult>() {
+            @Override
+            public void onSuccessResponse(@NonNull RouteResult data, Object tag) {
+                for (Route r : data.getRoutes()) {
+                    if (r.getTransfers()[0].getDepartureSemanticId() != null &&
+                            r.getTransfers()[0].getDepartureSemanticId().equals(request.getDepartureSemanticId())) {
+                        request.notifySuccessListeners(r);
+                    }
+                }
+            }
+        }, new IRailErrorResponseListener() {
+            @Override
+            public void onErrorResponse(@NonNull Exception e, Object tag) {
+                request.notifyErrorListeners(e);
+            }
+        }, request.getTag());
+
+        getRoutes(routesRequest);
+
     }
 
     @Override
@@ -163,8 +189,26 @@ public class LinkedConnectionsApi implements IrailDataProvider {
         }
     }
 
-    private void getStop(@NonNull VehicleStopRequest requests) {
-        // TODO: implement
+    private void getStop(@NonNull final VehicleStopRequest request) {
+        IrailLiveboardRequest liveboardRequest;
+        if (request.getStop().getType() == VehicleStopType.DEPARTURE || request.getStop().getType() == VehicleStopType.STOP) {
+            liveboardRequest = new IrailLiveboardRequest(request.getStop().getStation(), RouteTimeDefinition.DEPART_AT, DEPARTURES, request.getStop().getDepartureTime());
+        } else {
+            liveboardRequest = new IrailLiveboardRequest(request.getStop().getStation(), RouteTimeDefinition.ARRIVE_AT, ARRIVALS, request.getStop().getArrivalTime());
+        }
+        liveboardRequest.setCallback(new IRailSuccessResponseListener<Liveboard>() {
+            @Override
+            public void onSuccessResponse(@NonNull Liveboard data, Object tag) {
+                for (VehicleStop stop :
+                        data.getStops()) {
+                    if (stop.getDepartureSemanticId().equals(request.getStop().getDepartureSemanticId())) {
+                        request.notifySuccessListeners(stop);
+                        return;
+                    }
+                }
+            }
+        }, request.getOnErrorListener(), null);
+        getLiveboard(liveboardRequest);
     }
 
     @Override
@@ -195,10 +239,6 @@ public class LinkedConnectionsApi implements IrailDataProvider {
 
     public static String basename(String url) {
         return url.substring(url.lastIndexOf('/') + 1);
-    }
-
-    public static String uriToId(String uri) {
-        return "BE.NMBS." + basename(uri);
     }
 
 }

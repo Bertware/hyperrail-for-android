@@ -2,13 +2,10 @@ package be.hyperrail.android.test;
 
 import android.support.test.runner.AndroidJUnit4;
 
-import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.runner.RunWith;
 
-import java.time.LocalTime;
-
-import be.hyperrail.android.irail.contracts.IrailRequest;
+import static android.support.test.InstrumentationRegistry.getInstrumentation;
 
 /**
  * Compare APIs using data from iRail log files
@@ -19,7 +16,7 @@ public class ApiLogfileComparisonBenchmark {
 
     @BeforeClass
     public void setup(){
-
+        getInstrumentation().getContext().getResources().openRawResource(be.hyperrail.android.test.R.raw.irailapi_20180326);
     }
 
 
