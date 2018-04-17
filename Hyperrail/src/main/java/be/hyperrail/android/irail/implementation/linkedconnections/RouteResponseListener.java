@@ -16,6 +16,7 @@ import be.hyperrail.android.irail.contracts.IRailErrorResponseListener;
 import be.hyperrail.android.irail.contracts.IRailSuccessResponseListener;
 import be.hyperrail.android.irail.contracts.IrailStationProvider;
 import be.hyperrail.android.irail.contracts.OccupancyLevel;
+import be.hyperrail.android.irail.contracts.StationNotResolvedException;
 import be.hyperrail.android.irail.implementation.LinkedConnectionsApi;
 import be.hyperrail.android.irail.implementation.Route;
 import be.hyperrail.android.irail.implementation.RouteLeg;
@@ -34,12 +35,12 @@ public class RouteResponseListener implements IRailSuccessResponseListener<Linke
 
     private final LinkedConnectionsProvider mLinkedConnectionsProvider;
     private final IrailStationProvider mStationProvider;
-    IrailRoutesRequest mRoutesRequest;
+    private IrailRoutesRequest mRoutesRequest;
     private final DateTime mDepartureLimit;
-    int maxTransfers = 3;
+    private int maxTransfers = 4;
 
     // This makes a lot of checks easiers
-    DateTime infinite = new DateTime(3000, 1, 1, 0, 0);
+    private DateTime infinite = new DateTime(3000, 1, 1, 0, 0);
 
     // For each stop, keep an array of (departuretime, arrivaltime) pairs
     // After execution, this array will contain the xt profile for index x
@@ -61,7 +62,7 @@ public class RouteResponseListener implements IRailSuccessResponseListener<Linke
         mDepartureLimit = departureLimit;
     }
 
-    private void process(LinkedConnections data) {
+    private void process(LinkedConnections data) throws StationNotResolvedException {
         // Keep searching
         // - while no results have been found
         // - until we have the number of results we'd like (in case no departure time is given)
@@ -91,7 +92,7 @@ public class RouteResponseListener implements IRailSuccessResponseListener<Linke
 
             // Log::info((new Station($connection->getDepartureStopUri()))->getDefaultName() .' - '.(new Station($connection->getArrivalStopUri()))->getDefaultName() .' - '. $connection->getRoute());
             // Determine T1, the time when walking from here to the destination
-            if (Objects.equals(connection.arrivalStationUri, mRoutesRequest.getDestination().getSemanticId())) {
+            if (Objects.equals(connection.arrivalStationUri, mRoutesRequest.getDestination().getUri())) {
                 // If this connection ends at the destination, we can walk from here to tthe station exit.
                 // Our implementation does not add a footpath at the end
                 // Therefore, we arrive at our destination at the time this connection arrives
@@ -134,7 +135,7 @@ public class RouteResponseListener implements IRailSuccessResponseListener<Linke
                 // but arrives as soon as possible
                 // The earliest departure is in the back of the array. This int will keep track of which pair we're evaluating.
                 int position = S.get(connection.arrivalStationUri).size() - 1;
-               StationQuadruple quadruple = S.get(connection.arrivalStationUri).get(position);
+                StationQuadruple quadruple = S.get(connection.arrivalStationUri).get(position);
 
                 // TODO: replace hard-coded transfer time
                 // As long as we're arriving AFTER the pair departure, move forward in the list until we find a departure which is reachable
@@ -235,6 +236,7 @@ public class RouteResponseListener implements IRailSuccessResponseListener<Linke
                 // We're updating an existing connection, with a way to get off earlier (iterating using descending departure times).
                 // This only modifies the transfer stop, nothing else in the journey
                 if (Tmin.isEqual(T.get(connection.trip).arrivalTime)
+                        && !T.get(connection.trip).arrivalConnection.arrivalStationUri.equals(mRoutesRequest.getDestination().getUri())
                         && T3_transferArrivalTime.isEqual(T2_stayOnTripArrivalTime)
                         && S.containsKey(T.get(connection.trip).arrivalConnection.arrivalStationUri)
                         && S.containsKey(connection.arrivalStationUri)
@@ -247,7 +249,7 @@ public class RouteResponseListener implements IRailSuccessResponseListener<Linke
                     // Create a quadruple to lookup the first reachable connection in S
                     // Create one, because we don't know where we'd get on this train
 
-                   StationQuadruple quad = new StationQuadruple();
+                    StationQuadruple quad = new StationQuadruple();
                     quad.departureTime = connection.departureTime;
                     quad.departureConnection = connection;
                     // Current situation
@@ -302,7 +304,7 @@ public class RouteResponseListener implements IRailSuccessResponseListener<Linke
             // ====================================================== //
 
             // Create a quadruple to update S
-           StationQuadruple quad = new StationQuadruple();
+            StationQuadruple quad = new StationQuadruple();
             quad.departureTime = connection.departureTime;
             quad.arrivalTime = Tmin;
             // Additional data for journey extraction
@@ -311,7 +313,7 @@ public class RouteResponseListener implements IRailSuccessResponseListener<Linke
             quad.transfers = numberOfTransfers;
             if (S.containsKey(connection.departureStationUri)) {
                 int numberOfPairs = S.get(connection.departureStationUri).size();
-               StationQuadruple existingQuad = S.get(connection.departureStationUri).get(numberOfPairs - 1);
+                StationQuadruple existingQuad = S.get(connection.departureStationUri).get(numberOfPairs - 1);
                 // If existingQuad does not dominate quad
                 // The new departure time is always less or equal than an already stored one
                 if (quad.arrivalTime.isBefore(existingQuad.arrivalTime)) {
@@ -337,7 +339,7 @@ public class RouteResponseListener implements IRailSuccessResponseListener<Linke
         }
 
         // No results? load more data or stop if we passed the departure time limit
-        if (!S.containsKey(mRoutesRequest.getOrigin().getSemanticId())) {
+        if (!S.containsKey(mRoutesRequest.getOrigin().getUri())) {
             if (hasPassedDepartureLimit) {
                 RouteResult result = new RouteResult(mRoutesRequest.getOrigin(), mRoutesRequest.getDestination(), mRoutesRequest.getSearchTime(), mRoutesRequest.getTimeDefinition(), new Route[0]);
                 mRoutesRequest.notifySuccessListeners(result);
@@ -348,23 +350,23 @@ public class RouteResponseListener implements IRailSuccessResponseListener<Linke
         }
 
         // Results? Return data
-        Route[] routes = new Route[S.get(mRoutesRequest.getOrigin().getSemanticId()).size()];
+        Route[] routes = new Route[S.get(mRoutesRequest.getOrigin().getUri()).size()];
 
         int i = 0;
-        for (StationQuadruple quad : S.get(mRoutesRequest.getOrigin().getSemanticId())
+        for (StationQuadruple quad : S.get(mRoutesRequest.getOrigin().getUri())
                 ) {
             // it will iterate over all legs
-           StationQuadruple it = quad;
+            StationQuadruple it = quad;
             List<RouteLeg> legs = new ArrayList<>();
 
-            while (!Objects.equals(it.arrivalConnection.arrivalStationUri, mRoutesRequest.getDestination().getSemanticId())) {
+            while (!Objects.equals(it.arrivalConnection.arrivalStationUri, mRoutesRequest.getDestination().getUri())) {
                 RouteLegEnd departure = new RouteLegEnd(mStationProvider.getStationByUri(it.departureConnection.departureStationUri),
                                                         it.departureConnection.departureTime, "?", true, Duration.standardSeconds(quad.departureConnection.departureDelay), false, it.departureConnection.getDelayedDepartureTime().isAfterNow(),
                                                         it.departureConnection.uri, OccupancyLevel.UNSUPPORTED);
                 RouteLegEnd arrival = new RouteLegEnd(mStationProvider.getStationByUri(it.arrivalConnection.arrivalStationUri),
                                                       it.arrivalConnection.arrivalTime, "?", true, Duration.standardSeconds(quad.arrivalConnection.arrivalDelay), false, it.arrivalConnection.getDelayedArrivalTime().isAfterNow(),
                                                       it.arrivalConnection.arrivalStationUri, OccupancyLevel.UNSUPPORTED);
-                RouteLeg r = new RouteLeg(RouteLegType.TRAIN, new VehicleStub(basename(quad.departureConnection.route), mStationProvider.getStationByName(quad.departureConnection.direction), quad.departureConnection.trip), departure, arrival);
+                RouteLeg r = new RouteLeg(RouteLegType.TRAIN, new VehicleStub(basename(quad.departureConnection.route), quad.departureConnection.direction, quad.departureConnection.trip), departure, arrival);
                 legs.add(r);
 
                 it = getFirstReachableConnection(it);
@@ -385,7 +387,7 @@ public class RouteResponseListener implements IRailSuccessResponseListener<Linke
         mRoutesRequest.notifySuccessListeners(result);
     }
 
-   private StationQuadruple getFirstReachableConnection(StationQuadruple arrivalQuad) {
+    private StationQuadruple getFirstReachableConnection(StationQuadruple arrivalQuad) {
         List<StationQuadruple> it_options = S.get(arrivalQuad.arrivalConnection.arrivalStationUri);
         int i = it_options.size() - 1;
         // Find the next hop. This is the first reachable hop,
@@ -399,12 +401,16 @@ public class RouteResponseListener implements IRailSuccessResponseListener<Linke
 
     @Override
     public void onSuccessResponse(@NonNull LinkedConnections data, Object tag) {
-        process(data);
+        try {
+            process(data);
+        } catch (StationNotResolvedException e) {
+            mRoutesRequest.notifyErrorListeners(e);
+        }
     }
 
     @Override
     public void onErrorResponse(@NonNull Exception e, Object tag) {
-
+        mRoutesRequest.notifyErrorListeners(e);
     }
 
 

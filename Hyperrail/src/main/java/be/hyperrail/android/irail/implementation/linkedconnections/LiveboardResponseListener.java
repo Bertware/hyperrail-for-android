@@ -54,10 +54,10 @@ public class LiveboardResponseListener implements IRailSuccessResponseListener<L
     public void onSuccessResponse(@NonNull LinkedConnections data, Object tag) {
 
         for (LinkedConnection connection : data.connections) {
-            if (connection.departureStationUri.equals(request.getStation().getSemanticId())) {
+            if (connection.departureStationUri.equals(request.getStation().getUri())) {
                 departures.add(connection);
             }
-            if (connection.arrivalStationUri.equals(request.getStation().getSemanticId())) {
+            if (connection.arrivalStationUri.equals(request.getStation().getUri())) {
                 arrivals.add(connection);
                 departureIndexForArrivals.add(departures.size());
             }
@@ -113,7 +113,7 @@ public class LiveboardResponseListener implements IRailSuccessResponseListener<L
                     stops.add(new VehicleStop(request.getStation(), direction,
                                               new VehicleStub(
                                                       basename(departure.route),
-                                                      direction,
+                                                      departure.direction,
                                                       departure.route),
                                               "?",
                                               true,
@@ -143,7 +143,7 @@ public class LiveboardResponseListener implements IRailSuccessResponseListener<L
 
                 stops.add(new VehicleStop(request.getStation(), direction, new VehicleStub(
                         basename(departure.route),
-                        direction,
+                        departure.direction,
                         departure.route),
                                           "?",
                                           true,
@@ -176,7 +176,7 @@ public class LiveboardResponseListener implements IRailSuccessResponseListener<L
 
                 stops.add(new VehicleStop(request.getStation(), direction, new VehicleStub(
                         basename(arrival.route),
-                        direction,
+                        direction.getLocalizedName(),
                         arrival.route),
                                           "?",
                                           true,

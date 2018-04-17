@@ -13,6 +13,7 @@ import be.hyperrail.android.irail.contracts.IRailErrorResponseListener;
 import be.hyperrail.android.irail.contracts.IRailSuccessResponseListener;
 import be.hyperrail.android.irail.contracts.IrailStationProvider;
 import be.hyperrail.android.irail.contracts.OccupancyLevel;
+import be.hyperrail.android.irail.contracts.StationNotResolvedException;
 import be.hyperrail.android.irail.db.Station;
 import be.hyperrail.android.irail.factories.IrailFactory;
 import be.hyperrail.android.irail.implementation.Vehicle;
@@ -49,12 +50,20 @@ public class VehicleResponseListener implements IRailSuccessResponseListener<Lin
                 continue;
             }
 
-            Station departure = mStationProvider.getStationByUri(connection.departureStationUri);
+            Station departure;
+
+            try {
+                departure = mStationProvider.getStationByUri(connection.departureStationUri);
+            } catch (StationNotResolvedException e) {
+                mRequest.notifyErrorListeners(e);
+                return;
+            }
+
             Station direction = mStationProvider.getStationByName(connection.direction);
 
             if (stops.size() == 0) {
                 // First stop
-                stops.add(VehicleStop.buildDepartureVehicleStop(departure, direction, new VehicleStub(basename(connection.route), direction, connection.route), "?", true,
+                stops.add(VehicleStop.buildDepartureVehicleStop(departure, direction, new VehicleStub(basename(connection.route), connection.direction, connection.route), "?", true,
                                                                 connection.departureTime,
                                                                 Duration.standardSeconds(connection.departureDelay),
                                                                 false, connection.getDelayedDepartureTime().isAfterNow(),
@@ -62,7 +71,7 @@ public class VehicleResponseListener implements IRailSuccessResponseListener<Lin
             } else {
                 // Some stop during the journey
                 assert lastConnection != null;
-                stops.add(new VehicleStop(departure, direction, new VehicleStub(basename(connection.route), direction, connection.route), "?", true,
+                stops.add(new VehicleStop(departure, direction, new VehicleStub(basename(connection.route), connection.direction, connection.route), "?", true,
                                           connection.departureTime, lastConnection.arrivalTime,
                                           Duration.standardSeconds(connection.departureDelay),
                                           Duration.standardSeconds(lastConnection.arrivalDelay),
@@ -74,11 +83,18 @@ public class VehicleResponseListener implements IRailSuccessResponseListener<Lin
         }
 
         if (stops.size() > 0 && lastConnection != null) {
-            Station arrival = IrailFactory.getStationsProviderInstance().getStationByUri(lastConnection.arrivalStationUri);
+            Station arrival;
+            try {
+                arrival = IrailFactory.getStationsProviderInstance().getStationByUri(lastConnection.arrivalStationUri);
+            } catch (StationNotResolvedException e) {
+                mRequest.notifyErrorListeners(e);
+                return;
+            }
+
             Station direction = IrailFactory.getStationsProviderInstance().getStationByName(lastConnection.direction);
 
             // Arrival stop
-            stops.add(VehicleStop.buildArrivalVehicleStop(arrival, direction, new VehicleStub(basename(lastConnection.route), direction, lastConnection.route),
+            stops.add(VehicleStop.buildArrivalVehicleStop(arrival, direction, new VehicleStub(basename(lastConnection.route), lastConnection.direction, lastConnection.route),
                                                           "?", true,
                                                           lastConnection.arrivalTime,
                                                           Duration.standardSeconds(lastConnection.arrivalDelay),
@@ -86,7 +102,7 @@ public class VehicleResponseListener implements IRailSuccessResponseListener<Lin
                                                           lastConnection.uri, OccupancyLevel.UNSUPPORTED));
 
             VehicleStop[] stopsArray = new VehicleStop[stops.size()];
-            mRequest.notifySuccessListeners(new Vehicle(stops.get(0).getVehicle().getId(), lastConnection.route, stops.get(stops.size() - 1).getStation(), stops.get(0).getStation(), 0, 0, stops.toArray(stopsArray)));
+            mRequest.notifySuccessListeners(new Vehicle(stops.get(0).getVehicle().getId(), lastConnection.route, 0, 0, stops.toArray(stopsArray)));
         }
     }
 

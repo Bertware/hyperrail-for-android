@@ -157,6 +157,7 @@ public class IrailApi implements IrailDataProvider {
     public void getRoutes(final IrailRoutesRequest request) {
 
         // https://api.irail.be/connections/?to=Halle&from=Brussels-south&date={dmy}&time=2359&timeSel=arrive or depart&format=json
+
         DateTimeFormatter dateformat = DateTimeFormat.forPattern("ddMMyy");
         DateTimeFormatter timeformat = DateTimeFormat.forPattern("HHmm");
 

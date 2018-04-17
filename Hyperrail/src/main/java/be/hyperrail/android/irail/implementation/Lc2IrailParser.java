@@ -44,6 +44,7 @@ import java.util.List;
 import be.hyperrail.android.irail.contracts.IrailStationProvider;
 import be.hyperrail.android.irail.contracts.OccupancyLevel;
 import be.hyperrail.android.irail.contracts.RouteTimeDefinition;
+import be.hyperrail.android.irail.contracts.StationNotResolvedException;
 import be.hyperrail.android.irail.db.Station;
 import be.hyperrail.android.irail.implementation.requests.IrailLiveboardRequest;
 import be.hyperrail.android.irail.implementation.requests.IrailRoutesRequest;
@@ -147,19 +148,16 @@ public class Lc2IrailParser {
             hasArrived = json.getBoolean("hasArrived");
         }
 
-        if (json.has("platform")) {
-            platform = json.getString("platform");
-        }
-        if (json.has("uri")) {
-            uri = json.getString("uri");
-        }
-        if (json.has("vehicle")) {
-            vehicle = new VehicleStub(
-                    json.getJSONObject("vehicle").getString("id"),
-                    stationProvider.getStationByName(json.getJSONObject("vehicle").getString("direction")),
-                    json.getJSONObject("vehicle").getString("uri")
-            );
-        }
+        platform = json.getString("platform");
+
+        uri = json.getString("uri");
+
+        vehicle = new VehicleStub(
+                json.getJSONObject("vehicle").getString("id"),
+                json.getJSONObject("vehicle").getString("direction"),
+                json.getJSONObject("vehicle").getString("uri")
+        );
+
 
         VehicleStopType type;
         if (departureTime != null) {
@@ -183,7 +181,7 @@ public class Lc2IrailParser {
         }
 
         return new VehicleStop(request.getStation(),
-                               vehicle.direction,
+                               stationProvider.getStationByName(vehicle.headsign),
                                vehicle,
                                platform,
                                true,
@@ -200,12 +198,11 @@ public class Lc2IrailParser {
     }
 
     @NonNull
-    public Vehicle parseVehicle(@NonNull IrailVehicleRequest request, @NonNull JSONObject response) throws JSONException {
+    public Vehicle parseVehicle(@NonNull IrailVehicleRequest request, @NonNull JSONObject response) throws JSONException, StationNotResolvedException {
         String id = response.getString("id");
         String uri = response.getString("uri");
-        Station direction = stationProvider.getStationByName(response.getString("direction"));
 
-        VehicleStub vehicleStub = new VehicleStub(id, direction, uri);
+        VehicleStub vehicleStub = new VehicleStub(id, response.getString("direction"), uri);
         JSONArray jsonStops = response.getJSONArray("stops");
         VehicleStop stops[] = new VehicleStop[jsonStops.length()];
 
@@ -227,11 +224,11 @@ public class Lc2IrailParser {
                 latitude = stops[i].getStation().getLatitude();
             }
         }
-        return new Vehicle(id, uri, direction, stops[0].getStation(), longitude, latitude, stops);
+        return new Vehicle(id, uri, longitude, latitude, stops);
     }
 
     @NonNull
-    private VehicleStop parseVehicleStop(@NonNull IrailVehicleRequest request, @NonNull JSONObject json, @NonNull VehicleStub vehicle, @NonNull VehicleStopType type) throws JSONException {
+    private VehicleStop parseVehicleStop(@NonNull IrailVehicleRequest request, @NonNull JSONObject json, @NonNull VehicleStub vehicle, @NonNull VehicleStopType type) throws JSONException, StationNotResolvedException {
         /*
         {
               "arrivalDelay": 0,
@@ -308,7 +305,7 @@ public class Lc2IrailParser {
         }
 
         return new VehicleStop(station,
-                               vehicle.direction,
+                               stationProvider.getStationByName(vehicle.headsign),
                                vehicle,
                                platform,
                                isPlatformNormal,
@@ -324,7 +321,7 @@ public class Lc2IrailParser {
     }
 
     @NonNull
-    public RouteResult parseRoutes(@NonNull IrailRoutesRequest request, @NonNull JSONObject json) throws JSONException {
+    public RouteResult parseRoutes(@NonNull IrailRoutesRequest request, @NonNull JSONObject json) throws JSONException, StationNotResolvedException {
         Station origin = stationProvider.getStationByUri(json.getJSONObject("departureStation").getString("uri"));
         Station destination = stationProvider.getStationByUri(json.getJSONObject("destination").getString("uri"));
 
@@ -345,7 +342,7 @@ public class Lc2IrailParser {
      * @return The object representation of the passed JSON
      */
     @NonNull
-    private Route parseConnection(@NonNull IrailRoutesRequest request, @NonNull JSONObject json) throws JSONException {
+    private Route parseConnection(@NonNull IrailRoutesRequest request, @NonNull JSONObject json) throws JSONException, StationNotResolvedException {
         /*
           "legs": [
                 {
@@ -400,16 +397,12 @@ public class Lc2IrailParser {
             JSONObject jsonLeg = jsonlegs.getJSONObject(i);
             VehicleStub vehicle = new VehicleStub(
                     jsonLeg.getString("route"),
-                    stationProvider.getStationByName(jsonLeg.getString("direction")),
+                    jsonLeg.getString("direction"),
                     jsonLeg.getString("trip")
             );
 
             Station departureStation = stationProvider.getStationByUri(jsonLeg.getJSONObject("departureStation").getString("uri"));
             Station arrivalStation = stationProvider.getStationByUri(jsonLeg.getJSONObject("arrivalStation").getString("uri"));
-
-            if (departureStation == null || arrivalStation == null) {
-                throw new IllegalArgumentException("Invalid connection JSON! " + jsonLeg.toString());
-            }
 
             DateTime departureTime = DateTime.parse(jsonLeg.getString("departureTime"), dtf);
             int departureDelay = jsonLeg.getInt("departureDelay");

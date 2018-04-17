@@ -97,11 +97,11 @@ public class Lc2IrailApi implements IrailDataProvider {
         // https://lc2irail.thesis.bertmarcelis.be/liveboard/008841004/after/2018-04-13T13:13:47+00:00
         if (request.getTimeDefinition() == RouteTimeDefinition.ARRIVE_AT) {
             url = "https://lc2irail.thesis.bertmarcelis.be/liveboard/"
-                    + request.getStation().getId().substring(8) + "/before/"
+                    + request.getStation().getHafasId() + "/before/"
                     + fmt.print(request.getSearchTime());
         } else {
             url = "https://lc2irail.thesis.bertmarcelis.be/liveboard/"
-                    + request.getStation().getId().substring(8) + "/after/"
+                    + request.getStation().getHafasId() + "/after/"
                     + fmt.print(request.getSearchTime());
         }
         Response.Listener<JSONObject> successListener = new Response.Listener<JSONObject>() {
@@ -158,8 +158,8 @@ public class Lc2IrailApi implements IrailDataProvider {
 
         //https://lc2irail.thesis.bertmarcelis.be/connections/008841004/008814001/departing/2018-04-13T13:13:47+00:00
         String url = "https://lc2irail.thesis.bertmarcelis.be/connections/"
-                + request.getOrigin().getId().substring(8) + "/"
-                + request.getDestination().getId().substring(8) + "/";
+                + request.getOrigin().getHafasId() + "/"
+                + request.getDestination().getHafasId() + "/";
         if (request.getTimeDefinition() == RouteTimeDefinition.DEPART_AT) {
             url += "departing/";
         } else {
@@ -275,7 +275,7 @@ public class Lc2IrailApi implements IrailDataProvider {
 
         // https://lc2irail.thesis.bertmarcelis.be/vehicle/IC538/20180413
         String url = "https://lc2irail.thesis.bertmarcelis.be/vehicle/"
-                + request.getVehicleId().substring(8) + "/"
+                + request.getVehicleId() + "/"
                 + fmt.print(request.getSearchTime());
 
         Response.Listener<JSONObject> successListener = new Response.Listener<JSONObject>() {
