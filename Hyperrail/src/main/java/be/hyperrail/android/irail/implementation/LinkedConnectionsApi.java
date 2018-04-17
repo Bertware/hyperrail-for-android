@@ -11,10 +11,12 @@ import be.hyperrail.android.irail.contracts.IRailErrorResponseListener;
 import be.hyperrail.android.irail.contracts.IRailSuccessResponseListener;
 import be.hyperrail.android.irail.contracts.IrailDataProvider;
 import be.hyperrail.android.irail.contracts.IrailStationProvider;
+import be.hyperrail.android.irail.contracts.PagedResourceDescriptor;
 import be.hyperrail.android.irail.contracts.RouteTimeDefinition;
 import be.hyperrail.android.irail.factories.IrailFactory;
 import be.hyperrail.android.irail.implementation.irailapi.RouteAppendHelper;
 import be.hyperrail.android.irail.implementation.linkedconnections.LinkedConnectionsProvider;
+import be.hyperrail.android.irail.implementation.linkedconnections.LiveboardExtendHelper;
 import be.hyperrail.android.irail.implementation.linkedconnections.LiveboardResponseListener;
 import be.hyperrail.android.irail.implementation.linkedconnections.RouteResponseListener;
 import be.hyperrail.android.irail.implementation.linkedconnections.VehicleResponseListener;
@@ -75,38 +77,13 @@ public class LinkedConnectionsApi implements IrailDataProvider {
     public void extendLiveboard(@NonNull ExtendLiveboardRequest... requests) {
         for (final ExtendLiveboardRequest request :
                 requests) {
-            IrailLiveboardRequest nextRequest;
-            DateTime searchTime = request.getLiveboard().getSearchTime();
-
-            if (request.getAction() == ExtendLiveboardRequest.Action.PREPEND) {
-                if (request.getLiveboard().getStops().length > 0) {
-                    if (request.getLiveboard().getLiveboardType() == DEPARTURES) {
-                        searchTime = request.getLiveboard().getStops()[0].getDepartureTime();
-                    } else {
-                        searchTime = request.getLiveboard().getStops()[0].getArrivalTime();
-                    }
-                }
-                nextRequest = new IrailLiveboardRequest(request.getLiveboard(), RouteTimeDefinition.ARRIVE_AT, request.getLiveboard().getLiveboardType(), searchTime);
-            } else {
-                int stops = request.getLiveboard().getStops().length;
-                if (stops > 0) {
-                    if (request.getLiveboard().getLiveboardType() == DEPARTURES) {
-                        searchTime = request.getLiveboard().getStops()[stops - 1].getDepartureTime();
-                    } else {
-                        searchTime = request.getLiveboard().getStops()[stops - 1].getArrivalTime();
-                    }
-                }
-                nextRequest = new IrailLiveboardRequest(request.getLiveboard(), RouteTimeDefinition.DEPART_AT, request.getLiveboard().getLiveboardType(), searchTime);
-            }
-
-            nextRequest.setCallback(new IRailSuccessResponseListener<Liveboard>() {
-                @Override
-                public void onSuccessResponse(@NonNull Liveboard data, Object tag) {
-                    Liveboard result = request.getLiveboard();
-                    request.notifySuccessListeners(result.withStopsAppended(data));
-                }
-            }, request.getOnErrorListener(), null);
+            extendLiveboard(request);
         }
+    }
+
+    private void extendLiveboard(@NonNull final ExtendLiveboardRequest request) {
+        LiveboardExtendHelper helper = new LiveboardExtendHelper(mLinkedConnectionsProvider, mStationsProvider, request);
+        helper.extend();
     }
 
     @Override

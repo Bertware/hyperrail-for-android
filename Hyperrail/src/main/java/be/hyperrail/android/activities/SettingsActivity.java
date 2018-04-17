@@ -21,10 +21,12 @@ package be.hyperrail.android.activities;
 import android.os.Bundle;
 import android.preference.PreferenceActivity;
 import android.preference.PreferenceFragment;
+import android.preference.PreferenceManager;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 
 import be.hyperrail.android.R;
+import be.hyperrail.android.irail.factories.IrailFactory;
 
 /**
  * A {@link PreferenceActivity} that presents a set of application settings. On
@@ -60,6 +62,12 @@ public class SettingsActivity extends AppCompatActivity {
 
     }
 
+    @Override
+    protected void onStop() {
+        super.onStop();
+        IrailFactory.setup(this);
+    }
+
     public static class SettingsFragment extends PreferenceFragment {
 
         @Override
@@ -67,7 +75,6 @@ public class SettingsActivity extends AppCompatActivity {
             super.onCreate(savedInstanceState);
 
             // Load the preferences from an XML resource
-
             addPreferencesFromResource(R.xml.pref_general);
         }
 

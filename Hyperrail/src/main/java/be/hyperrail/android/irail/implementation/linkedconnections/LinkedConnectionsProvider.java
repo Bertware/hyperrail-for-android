@@ -6,6 +6,7 @@ import android.net.NetworkInfo;
 import android.support.annotation.NonNull;
 import android.util.Log;
 
+import com.android.volley.Cache;
 import com.android.volley.DefaultRetryPolicy;
 import com.android.volley.Request;
 import com.android.volley.RequestQueue;
@@ -18,6 +19,7 @@ import com.android.volley.toolbox.Volley;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Duration;
+import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.ISODateTimeFormat;
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -45,7 +47,7 @@ public class LinkedConnectionsProvider {
     private final RequestQueue requestQueue;
     private final RetryPolicy requestPolicy;
     private final ConnectivityManager mConnectivityManager;
-    
+
     private boolean mCacheEnabled = true;
 
     private static final String UA = "HyperRail for Android - " + BuildConfig.VERSION_NAME;
@@ -159,10 +161,11 @@ public class LinkedConnectionsProvider {
     }
 
 
-    void getLinkedConnectionByUrl(final String url, final IRailSuccessResponseListener<LinkedConnections> successListener, final IRailErrorResponseListener errorListener, final Object tag) {
+    public void getLinkedConnectionByUrl(final String url, final IRailSuccessResponseListener<LinkedConnections> successListener, final IRailErrorResponseListener errorListener, final Object tag) {
         // https://graph.irail.be/sncb/connections?departureTime={ISO8601}
         // Log.i(LOGTAG, "Loading " + url);
         // TODO: prevent loading the same URL twice when two requests are made short after each other (locking based on URL)
+
 
         Response.Listener<JSONObject> volleySuccessListener = new Response.Listener<JSONObject>() {
             @Override
@@ -203,7 +206,7 @@ public class LinkedConnectionsProvider {
 
         JsonObjectRequest jsObjRequest = new JsonObjectRequest(Request.Method.GET, url, null,
                                                                volleySuccessListener,
-                                                               volleyErrorListener){
+                                                               volleyErrorListener) {
             @Override
             public Map<String, String> getHeaders() {
                 Map<String, String> headers = new HashMap<>();
@@ -211,6 +214,23 @@ public class LinkedConnectionsProvider {
                 return headers;
             }
         };
+
+        LinkedConnectionsOfflineCache.CachedLinkedConnections cache = mLinkedConnectionsOfflineCache.load(url);
+        if (cache != null && cache.createdAt.isAfter(DateTime.now().minusSeconds(60))) {
+            try {
+                Log.w("LCProvider", "Fulfilled without network");
+                volleySuccessListener.onResponse(new JSONObject(cache.data));
+                return;
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+        } else {
+            if (cache == null) {
+                Log.w("LCProvider", "Not in cache");
+            } else {
+                Log.w("LCProvider", "Cache is " + ( new Duration(cache.createdAt,DateTime.now()).getStandardSeconds()) + "sec old");
+            }
+        }
 
         jsObjRequest.setShouldCache(mCacheEnabled);
         jsObjRequest.setRetryPolicy(requestPolicy);
@@ -244,14 +264,14 @@ public class LinkedConnectionsProvider {
             connection.uri = entry.getString("@id");
 
             connection.departureStationUri = entry.getString("departureStop");
-            connection.departureTime = DateTime.parse(entry.getString("departureTime"));
+            connection.departureTime = DateTime.parse(entry.getString("departureTime")).withZone(DateTimeZone.forID("Europe/Brussels"));
             connection.departureDelay = 0;
             if (entry.has("departureDelay")) {
                 connection.departureDelay = entry.getInt("departureDelay");
             }
 
             connection.arrivalStationUri = entry.getString("arrivalStop");
-            connection.arrivalTime = DateTime.parse(entry.getString("arrivalTime"));
+            connection.arrivalTime = DateTime.parse(entry.getString("arrivalTime")).withZone(DateTimeZone.forID("Europe/Brussels"));
 
             connection.arrivalDelay = 0;
             if (entry.has("arrivalDelay")) {

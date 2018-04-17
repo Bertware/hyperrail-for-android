@@ -69,8 +69,8 @@ public class Lc2IrailApi implements IrailDataProvider {
         this.parser = new Lc2IrailParser(stationsProvider);
         this.requestQueue = Volley.newRequestQueue(context);
         this.requestPolicy = new DefaultRetryPolicy(
-                1500,
-                4,
+                500,
+                2,
                 DefaultRetryPolicy.DEFAULT_BACKOFF_MULT
         );
         mConnectivityManager =

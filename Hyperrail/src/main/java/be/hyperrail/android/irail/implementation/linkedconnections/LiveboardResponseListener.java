@@ -1,9 +1,5 @@
 package be.hyperrail.android.irail.implementation.linkedconnections;
 
-/**
- * Created in be.hyperrail.android.irail.implementation.linkedconnections on 15/03/2018.
- */
-
 import android.support.annotation.NonNull;
 import android.util.Log;
 
@@ -18,6 +14,7 @@ import be.hyperrail.android.irail.contracts.IRailErrorResponseListener;
 import be.hyperrail.android.irail.contracts.IRailSuccessResponseListener;
 import be.hyperrail.android.irail.contracts.IrailStationProvider;
 import be.hyperrail.android.irail.contracts.OccupancyLevel;
+import be.hyperrail.android.irail.contracts.PagedResourceDescriptor;
 import be.hyperrail.android.irail.contracts.RouteTimeDefinition;
 import be.hyperrail.android.irail.db.Station;
 import be.hyperrail.android.irail.factories.IrailFactory;
@@ -29,20 +26,25 @@ import be.hyperrail.android.irail.implementation.requests.IrailLiveboardRequest;
 
 import static be.hyperrail.android.irail.implementation.LinkedConnectionsApi.basename;
 import static be.hyperrail.android.irail.implementation.Liveboard.LiveboardType.ARRIVALS;
+import static be.hyperrail.android.irail.implementation.Liveboard.LiveboardType.DEPARTURES;
 
 /**
  * A listener which receives graph.irail.be data and builds a liveboard for 2 hours.
  */
 public class LiveboardResponseListener implements IRailSuccessResponseListener<LinkedConnections>, IRailErrorResponseListener {
-    final ArrayList<LinkedConnection> arrivals = new ArrayList<>();
-    final ArrayList<LinkedConnection> departures = new ArrayList<>();
-    final ArrayList<VehicleStop> stops = new ArrayList<>();
+    private final ArrayList<LinkedConnection> arrivals = new ArrayList<>();
+    private final ArrayList<LinkedConnection> departures = new ArrayList<>();
+    private final ArrayList<VehicleStop> stops = new ArrayList<>();
 
     // Both departures and arrivals are in chronological order. We'll search to see if we can find a departure which matches an arrival, but only start looking AFTER this arrival.
-    final ArrayList<Integer> departureIndexForArrivals = new ArrayList<>();
+    private final ArrayList<Integer> departureIndexForArrivals = new ArrayList<>();
     private final LinkedConnectionsProvider mLinkedConnectionsProvider;
     private final IrailStationProvider mStationProvider;
     private IrailLiveboardRequest request;
+
+    private String previous;
+    private String current;
+    private String next;
 
     public LiveboardResponseListener(LinkedConnectionsProvider linkedConnectionsProvider, IrailStationProvider stationProvider, IrailLiveboardRequest request) {
         mLinkedConnectionsProvider = linkedConnectionsProvider;
@@ -52,6 +54,20 @@ public class LiveboardResponseListener implements IRailSuccessResponseListener<L
 
     @Override
     public void onSuccessResponse(@NonNull LinkedConnections data, Object tag) {
+
+        if (current == null) {
+            previous = data.previous;
+            current = data.current;
+            next = data.next;
+        }
+
+        if (request.getTimeDefinition() == RouteTimeDefinition.DEPART_AT){
+            // Moving forward through pages
+            next = data.next;
+        } else {
+            // Moving backward through pages
+            previous = data.previous;
+        }
 
         for (LinkedConnection connection : data.connections) {
             if (connection.departureStationUri.equals(request.getStation().getUri())) {
@@ -63,9 +79,11 @@ public class LiveboardResponseListener implements IRailSuccessResponseListener<L
             }
         }
 
-        if (request.getType() == Liveboard.LiveboardType.DEPARTURES && departures.size() > 20 || request.getType() == ARRIVALS && arrivals.size() > 20) {
+        if (request.getType() == Liveboard.LiveboardType.DEPARTURES && departures.size() >= 1 || request.getType() == ARRIVALS && arrivals.size() >= 1) {
             VehicleStop[] stoparray = generateStopArray();
-            request.notifySuccessListeners(new Liveboard(request.getStation(), stoparray, request.getSearchTime(), request.getType(), request.getTimeDefinition()));
+            Liveboard liveboard = new Liveboard(request.getStation(), stoparray, request.getSearchTime(), request.getType(), request.getTimeDefinition());
+            liveboard.setPageInfo(new PagedResourceDescriptor(previous, current, next));
+            request.notifySuccessListeners(liveboard);
         } else {
             String link = data.next;
             // When searching for "arrive before", we need to look backwards
@@ -131,7 +149,7 @@ public class LiveboardResponseListener implements IRailSuccessResponseListener<L
             }
         }
 
-        if (request.getTimeDefinition() == RouteTimeDefinition.DEPART_AT) {
+        if (request.getType() == DEPARTURES) {
             for (int i = 0; i < departures.size(); i++) {
                 if (handledConnections.contains(departures.get(i))) {
                     continue;

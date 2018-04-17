@@ -134,6 +134,20 @@
             android:title="@string/pref_display_vehicle_on_map"/>
 
     </PreferenceCategory>
+    <PreferenceCategory
+        android:key="api"
+        android:title="API">
+
+        <ListPreference
+            android:defaultValue="irail"
+            android:entries="@array/pref_list_api_keys"
+            android:entryValues="@array/pref_list_api_keys"
+            android:key="api"
+            android:negativeButtonText="@null"
+            android:positiveButtonText="@null"
+            android:summary="%s"
+            android:title="Data provider"/>
+    </PreferenceCategory>
 
     <PreferenceCategory
         android:key="pref_links"
