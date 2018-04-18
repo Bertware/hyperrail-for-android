@@ -46,37 +46,37 @@ public class VehicleResponseListener implements IRailSuccessResponseListener<Lin
         LinkedConnection lastConnection = null;
         for (int i = 0; i < data.connections.length; i++) {
             LinkedConnection connection = data.connections[i];
-            if (!Objects.equals(connection.route, "http://irail.be/vehicle/" + Vehicle.getVehicleClass(mRequest.getVehicleId()) + Vehicle.getVehicleNumber(mRequest.getVehicleId()))) {
+            if (!Objects.equals(connection.getRoute(), "http://irail.be/vehicle/" + mRequest.getVehicleId())) {
                 continue;
             }
 
             Station departure;
 
             try {
-                departure = mStationProvider.getStationByUri(connection.departureStationUri);
+                departure = mStationProvider.getStationByUri(connection.getDepartureStationUri());
             } catch (StationNotResolvedException e) {
                 mRequest.notifyErrorListeners(e);
                 return;
             }
 
-            Station direction = mStationProvider.getStationByName(connection.direction);
+            Station direction = mStationProvider.getStationByName(connection.getDirection());
 
             if (stops.size() == 0) {
                 // First stop
-                stops.add(VehicleStop.buildDepartureVehicleStop(departure, direction, new VehicleStub(basename(connection.route), connection.direction, connection.route), "?", true,
-                                                                connection.departureTime,
-                                                                Duration.standardSeconds(connection.departureDelay),
-                                                                false, connection.getDelayedDepartureTime().isAfterNow(),
-                                                                connection.uri, OccupancyLevel.UNSUPPORTED));
+                stops.add(VehicleStop.buildDepartureVehicleStop(departure, direction, new VehicleStub(basename(connection.getRoute()), connection.getDirection(), connection.getRoute()), "?", true,
+                                                                connection.getDepartureTime(),
+                                                                Duration.standardSeconds(connection.getDepartureDelay()),
+                                                                false, connection.getDelayedDepartureTime().isBeforeNow(),
+                                                                connection.getUri(), OccupancyLevel.UNSUPPORTED));
             } else {
                 // Some stop during the journey
                 assert lastConnection != null;
-                stops.add(new VehicleStop(departure, direction, new VehicleStub(basename(connection.route), connection.direction, connection.route), "?", true,
-                                          connection.departureTime, lastConnection.arrivalTime,
-                                          Duration.standardSeconds(connection.departureDelay),
-                                          Duration.standardSeconds(lastConnection.arrivalDelay),
-                                          false, false, lastConnection.getDelayedArrivalTime().isAfterNow(),
-                                          connection.uri, OccupancyLevel.UNSUPPORTED, VehicleStopType.STOP));
+                stops.add(new VehicleStop(departure, direction, new VehicleStub(basename(connection.getRoute()), connection.getDirection(), connection.getRoute()), "?", true,
+                                          connection.getDepartureTime(), lastConnection.getArrivalTime(),
+                                          Duration.standardSeconds(connection.getDepartureDelay()),
+                                          Duration.standardSeconds(lastConnection.getArrivalDelay()),
+                                          false, false, lastConnection.getDelayedArrivalTime().isBeforeNow(),
+                                          connection.getUri(), OccupancyLevel.UNSUPPORTED, VehicleStopType.STOP));
             }
 
             lastConnection = connection;
@@ -85,24 +85,24 @@ public class VehicleResponseListener implements IRailSuccessResponseListener<Lin
         if (stops.size() > 0 && lastConnection != null) {
             Station arrival;
             try {
-                arrival = IrailFactory.getStationsProviderInstance().getStationByUri(lastConnection.arrivalStationUri);
+                arrival = IrailFactory.getStationsProviderInstance().getStationByUri(lastConnection.getArrivalStationUri());
             } catch (StationNotResolvedException e) {
                 mRequest.notifyErrorListeners(e);
                 return;
             }
 
-            Station direction = IrailFactory.getStationsProviderInstance().getStationByName(lastConnection.direction);
+            Station direction = IrailFactory.getStationsProviderInstance().getStationByName(lastConnection.getDirection());
 
             // Arrival stop
-            stops.add(VehicleStop.buildArrivalVehicleStop(arrival, direction, new VehicleStub(basename(lastConnection.route), lastConnection.direction, lastConnection.route),
+            stops.add(VehicleStop.buildArrivalVehicleStop(arrival, direction, new VehicleStub(basename(lastConnection.getRoute()), lastConnection.getDirection(), lastConnection.getRoute()),
                                                           "?", true,
-                                                          lastConnection.arrivalTime,
-                                                          Duration.standardSeconds(lastConnection.arrivalDelay),
-                                                          false, lastConnection.getDelayedArrivalTime().isAfterNow(),
-                                                          lastConnection.uri, OccupancyLevel.UNSUPPORTED));
+                                                          lastConnection.getArrivalTime(),
+                                                          Duration.standardSeconds(lastConnection.getArrivalDelay()),
+                                                          false, lastConnection.getDelayedArrivalTime().isBeforeNow(),
+                                                          lastConnection.getUri(), OccupancyLevel.UNSUPPORTED));
 
             VehicleStop[] stopsArray = new VehicleStop[stops.size()];
-            mRequest.notifySuccessListeners(new Vehicle(stops.get(0).getVehicle().getId(), lastConnection.route, 0, 0, stops.toArray(stopsArray)));
+            mRequest.notifySuccessListeners(new Vehicle(stops.get(0).getVehicle().getId(), lastConnection.getRoute(), 0, 0, stops.toArray(stopsArray)));
         }
     }
 

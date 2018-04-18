@@ -17,7 +17,6 @@ import be.hyperrail.android.irail.contracts.IRailSuccessResponseListener;
 import be.hyperrail.android.irail.contracts.IrailStationProvider;
 import be.hyperrail.android.irail.contracts.OccupancyLevel;
 import be.hyperrail.android.irail.contracts.StationNotResolvedException;
-import be.hyperrail.android.irail.implementation.LinkedConnectionsApi;
 import be.hyperrail.android.irail.implementation.Route;
 import be.hyperrail.android.irail.implementation.RouteLeg;
 import be.hyperrail.android.irail.implementation.RouteLegEnd;
@@ -78,7 +77,7 @@ public class RouteResponseListener implements IRailSuccessResponseListener<Linke
             LinkedConnection connection = data.connections[i];
 
             // TODO: filter too late / too early
-            if (connection.departureTime.isBefore(mDepartureLimit)) {
+            if (connection.getDepartureTime().isBefore(mDepartureLimit)) {
                 hasPassedDepartureLimit = true;
                 continue;
             }
@@ -92,11 +91,11 @@ public class RouteResponseListener implements IRailSuccessResponseListener<Linke
 
             // Log::info((new Station($connection->getDepartureStopUri()))->getDefaultName() .' - '.(new Station($connection->getArrivalStopUri()))->getDefaultName() .' - '. $connection->getRoute());
             // Determine T1, the time when walking from here to the destination
-            if (Objects.equals(connection.arrivalStationUri, mRoutesRequest.getDestination().getUri())) {
+            if (Objects.equals(connection.getArrivalStationUri(), mRoutesRequest.getDestination().getUri())) {
                 // If this connection ends at the destination, we can walk from here to tthe station exit.
                 // Our implementation does not add a footpath at the end
                 // Therefore, we arrive at our destination at the time this connection arrives
-                T1_walkingArrivalTime = connection.arrivalTime;
+                T1_walkingArrivalTime = connection.getArrivalTime();
                 // We're walking, so this connections has no transfers between it and the destination
                 T1_transfers = 0;
                 // Log::info("[{$connection->getId()}] Walking possible with arrival time  $T1_walkingArrivalTime.");
@@ -113,11 +112,11 @@ public class RouteResponseListener implements IRailSuccessResponseListener<Linke
                 // Log::info("[{$connection->getId()}] Walking not possible.");
             }
             // Determine T2, the first possible time of arrival when remaining seated
-            if (T.containsKey(connection.trip)) {
+            if (T.containsKey(connection.getTrip())) {
                 // When we remain seated on this train, we will arrive at the fastest arrival time possible for this vehicle
-                T2_stayOnTripArrivalTime = T.get(connection.trip).arrivalTime;
+                T2_stayOnTripArrivalTime = T.get(connection.getTrip()).arrivalTime;
                 // Remaining seated will have the same number of transfers between this connection and the destination, as from the best exit stop and the destination
-                T2_transfers = T.get(connection.trip).transfers;
+                T2_transfers = T.get(connection.getTrip()).transfers;
                 // Log::info("[{$connection->getId()}] Remaining seated possible with arrival time $T2_stayOnTripArrivalTime and $T2_transfers transfers.");
             } else {
                 // When there isn't a fastest arrival time for this stop yet, it means we haven't found a connection
@@ -130,23 +129,23 @@ public class RouteResponseListener implements IRailSuccessResponseListener<Linke
                 // Log::info("[{$connection->getId()}] Remaining seated not possible");
             }
             // Determine T3, the time of arrival when taking the best possible transfer in this station
-            if (S.containsKey(connection.arrivalStationUri)) {
+            if (S.containsKey(connection.getArrivalStationUri())) {
                 // If there are connections leaving from the arrival station, determine the one which departs after we arrive,
                 // but arrives as soon as possible
                 // The earliest departure is in the back of the array. This int will keep track of which pair we're evaluating.
-                int position = S.get(connection.arrivalStationUri).size() - 1;
-                StationQuadruple quadruple = S.get(connection.arrivalStationUri).get(position);
+                int position = S.get(connection.getArrivalStationUri()).size() - 1;
+                StationQuadruple quadruple = S.get(connection.getArrivalStationUri()).get(position);
 
                 // TODO: replace hard-coded transfer time
                 // As long as we're arriving AFTER the pair departure, move forward in the list until we find a departure which is reachable
                 // The list is sorted by descending departure time, so the earliest departures are in the back (so we move back to front)
 
-                while ((quadruple.departureTime.getMillis() - 300 * 1000 <= connection.arrivalTime.getMillis() ||
+                while ((quadruple.departureTime.getMillis() - 300 * 1000 <= connection.getArrivalTime().getMillis() ||
                         quadruple.transfers >= maxTransfers) && position > 0) {
                     position--;
-                    quadruple = S.get(connection.arrivalStationUri).get(position);
+                    quadruple = S.get(connection.getArrivalStationUri()).get(position);
                 }
-                if (quadruple.departureTime.getMillis() - 300 * 1000 > connection.arrivalTime.getMillis() && quadruple.transfers <= maxTransfers) {
+                if (quadruple.departureTime.getMillis() - 300 * 1000 > connection.getArrivalTime().getMillis() && quadruple.transfers <= maxTransfers) {
                     // If a result was found in the list, this is the earliest arrival time when transferring here
                     // Optional: Adding one second to the arrival time will ensure that the route with the smallest number of legs is chosen.
                     // This would not affect journey extaction, but would prefer routes with less legs when arrival times are identical (as their arrival time will be one second earlier)
@@ -199,7 +198,7 @@ public class RouteResponseListener implements IRailSuccessResponseListener<Linke
                 Tmin = T2_stayOnTripArrivalTime;
                 // We're staying on this trip. This also implicates a key in T exists for this trip. We're getting off at the previous exit for this vehicle.
                 if (T2_stayOnTripArrivalTime.isBefore(infinite)) {
-                    exitTrainConnection = T.get(connection.trip).arrivalConnection;
+                    exitTrainConnection = T.get(connection.getTrip()).arrivalConnection;
                 } else {
                     exitTrainConnection = null;
                 }
@@ -228,40 +227,40 @@ public class RouteResponseListener implements IRailSuccessResponseListener<Linke
             // START UPDATE T
             // ====================================================== //
             // Set the fastest arrival time for this vehicle, and set the connection at which we have to hop off
-            if (T.containsKey(connection.trip)) {
+            if (T.containsKey(connection.getTrip())) {
 
                 // When there is a faster way for this trip, it's by getting of at this connection's arrival station and transferring (or having arrived)
 
                 // Can also be equal for a transfer with the best transfer (don't do bru south - central - north - transfer - north - central - south
                 // We're updating an existing connection, with a way to get off earlier (iterating using descending departure times).
                 // This only modifies the transfer stop, nothing else in the journey
-                if (Tmin.isEqual(T.get(connection.trip).arrivalTime)
-                        && !T.get(connection.trip).arrivalConnection.arrivalStationUri.equals(mRoutesRequest.getDestination().getUri())
+                if (Tmin.isEqual(T.get(connection.getTrip()).arrivalTime)
+                        && !T.get(connection.getTrip()).arrivalConnection.getArrivalStationUri().equals(mRoutesRequest.getDestination().getUri())
                         && T3_transferArrivalTime.isEqual(T2_stayOnTripArrivalTime)
-                        && S.containsKey(T.get(connection.trip).arrivalConnection.arrivalStationUri)
-                        && S.containsKey(connection.arrivalStationUri)
+                        && S.containsKey(T.get(connection.getTrip()).arrivalConnection.getArrivalStationUri())
+                        && S.containsKey(connection.getArrivalStationUri())
                         ) {
                     // When the arrival time is the same, the number of transfers should also be the same
                     // We prefer the exit connection with the largest transfer time
                     // Suppose we exit the train here: connection. Does this improve on the transfer time?
-                    LinkedConnection currentTrainExit = T.get(connection.trip).arrivalConnection;
+                    LinkedConnection currentTrainExit = T.get(connection.getTrip()).arrivalConnection;
                     // Now we need the departure in the next station!
                     // Create a quadruple to lookup the first reachable connection in S
                     // Create one, because we don't know where we'd get on this train
 
                     StationQuadruple quad = new StationQuadruple();
-                    quad.departureTime = connection.departureTime;
+                    quad.departureTime = connection.getDepartureTime();
                     quad.departureConnection = connection;
                     // Current situation
                     quad.arrivalTime = Tmin;
                     quad.arrivalConnection = currentTrainExit;
 
-                    Duration currentTransfer = new Duration(currentTrainExit.arrivalTime, getFirstReachableConnection(quad).departureTime);
+                    Duration currentTransfer = new Duration(currentTrainExit.getArrivalTime(), getFirstReachableConnection(quad).departureTime);
 
                     // New situation
                     quad.arrivalTime = Tmin;
                     quad.arrivalConnection = exitTrainConnection;
-                    Duration newTransfer = new Duration(exitTrainConnection.arrivalTime, getFirstReachableConnection(quad).departureTime);
+                    Duration newTransfer = new Duration(exitTrainConnection.getArrivalTime(), getFirstReachableConnection(quad).departureTime);
 
                     // If the new situation is better
                     if (newTransfer.isLongerThan(currentTransfer)) {
@@ -270,12 +269,12 @@ public class RouteResponseListener implements IRailSuccessResponseListener<Linke
                         triple.arrivalConnection = exitTrainConnection;
                         triple.transfers = numberOfTransfers;
 
-                        T.put(connection.trip, triple);
+                        T.put(connection.getTrip(), triple);
                     }
                 }
 
                 // Faster way
-                if (Tmin.isBefore(T.get(connection.trip).arrivalTime)) {
+                if (Tmin.isBefore(T.get(connection.getTrip()).arrivalTime)) {
                     // exit = (new Station(exitTrainConnection->getArrivalStopUri()))->getDefaultName();
                     // Log::info("[{connection->getId()}] Updating T: Arrive at Tmin using {connection->getRoute()} with numberOfTransfers transfers. Get off at {exit}.");
                     TrainTriple triple = new TrainTriple();
@@ -283,7 +282,7 @@ public class RouteResponseListener implements IRailSuccessResponseListener<Linke
                     triple.arrivalConnection = exitTrainConnection;
                     triple.transfers = numberOfTransfers;
 
-                    T.put(connection.trip, triple);
+                    T.put(connection.getTrip(), triple);
                 }
             } else {
                 // exit = (new Station(exitTrainConnection->getArrivalStopUri()))->getDefaultName();
@@ -293,7 +292,7 @@ public class RouteResponseListener implements IRailSuccessResponseListener<Linke
                 triple.arrivalTime = Tmin;
                 triple.arrivalConnection = exitTrainConnection;
                 triple.transfers = numberOfTransfers;
-                T.put(connection.trip, triple);
+                T.put(connection.getTrip(), triple);
             }
             // ====================================================== //
             // END UPDATE T
@@ -305,33 +304,33 @@ public class RouteResponseListener implements IRailSuccessResponseListener<Linke
 
             // Create a quadruple to update S
             StationQuadruple quad = new StationQuadruple();
-            quad.departureTime = connection.departureTime;
+            quad.departureTime = connection.getDepartureTime();
             quad.arrivalTime = Tmin;
             // Additional data for journey extraction
             quad.departureConnection = connection;
-            quad.arrivalConnection = T.get(connection.trip).arrivalConnection;
+            quad.arrivalConnection = T.get(connection.getTrip()).arrivalConnection;
             quad.transfers = numberOfTransfers;
-            if (S.containsKey(connection.departureStationUri)) {
-                int numberOfPairs = S.get(connection.departureStationUri).size();
-                StationQuadruple existingQuad = S.get(connection.departureStationUri).get(numberOfPairs - 1);
+            if (S.containsKey(connection.getDepartureStationUri())) {
+                int numberOfPairs = S.get(connection.getDepartureStationUri()).size();
+                StationQuadruple existingQuad = S.get(connection.getDepartureStationUri()).get(numberOfPairs - 1);
                 // If existingQuad does not dominate quad
                 // The new departure time is always less or equal than an already stored one
                 if (quad.arrivalTime.isBefore(existingQuad.arrivalTime)) {
                     // // Log::info("[{connection->getId()}] Updating S: Reach destination from departureStop departing at {quad[self::KEY_DEPARTURE_TIME]} arriving at {quad[self::KEY_ARRIVAL_TIME]}");
                     if (quad.departureTime.isEqual(existingQuad.departureTime)) {
                         // Replace existingQuad at the back
-                        S.get(connection.departureStationUri).remove(numberOfPairs - 1);
-                        S.get(connection.departureStationUri).add(numberOfPairs - 1, quad);
+                        S.get(connection.getDepartureStationUri()).remove(numberOfPairs - 1);
+                        S.get(connection.getDepartureStationUri()).add(numberOfPairs - 1, quad);
                     } else {
                         // We're iterating over descending departure times, therefore the departure
                         // Insert at the back
-                        S.get(connection.departureStationUri).add(quad);
+                        S.get(connection.getDepartureStationUri()).add(quad);
                     }
                 }
             } else {
                 // Log::info("[{connection->getId()}] Updating S: New: Reach destination from departureStop departing at {quad[self::KEY_DEPARTURE_TIME]} arriving at {quad[self::KEY_ARRIVAL_TIME]}");
-                S.put(connection.departureStationUri, new ArrayList<StationQuadruple>());
-                S.get(connection.departureStationUri).add(quad);
+                S.put(connection.getDepartureStationUri(), new ArrayList<StationQuadruple>());
+                S.get(connection.getDepartureStationUri()).add(quad);
             }
             // ====================================================== //
             // END UPDATE S
@@ -359,14 +358,14 @@ public class RouteResponseListener implements IRailSuccessResponseListener<Linke
             StationQuadruple it = quad;
             List<RouteLeg> legs = new ArrayList<>();
 
-            while (!Objects.equals(it.arrivalConnection.arrivalStationUri, mRoutesRequest.getDestination().getUri())) {
-                RouteLegEnd departure = new RouteLegEnd(mStationProvider.getStationByUri(it.departureConnection.departureStationUri),
-                                                        it.departureConnection.departureTime, "?", true, Duration.standardSeconds(quad.departureConnection.departureDelay), false, it.departureConnection.getDelayedDepartureTime().isAfterNow(),
-                                                        it.departureConnection.uri, OccupancyLevel.UNSUPPORTED);
-                RouteLegEnd arrival = new RouteLegEnd(mStationProvider.getStationByUri(it.arrivalConnection.arrivalStationUri),
-                                                      it.arrivalConnection.arrivalTime, "?", true, Duration.standardSeconds(quad.arrivalConnection.arrivalDelay), false, it.arrivalConnection.getDelayedArrivalTime().isAfterNow(),
-                                                      it.arrivalConnection.arrivalStationUri, OccupancyLevel.UNSUPPORTED);
-                RouteLeg r = new RouteLeg(RouteLegType.TRAIN, new VehicleStub(basename(quad.departureConnection.route), quad.departureConnection.direction, quad.departureConnection.trip), departure, arrival);
+            while (!Objects.equals(it.arrivalConnection.getArrivalStationUri(), mRoutesRequest.getDestination().getUri())) {
+                RouteLegEnd departure = new RouteLegEnd(mStationProvider.getStationByUri(it.departureConnection.getDepartureStationUri()),
+                                                        it.departureConnection.getDepartureTime(), "?", true, Duration.standardSeconds(quad.departureConnection.getDepartureDelay()), false, it.departureConnection.getDelayedDepartureTime().isBeforeNow(),
+                                                        it.departureConnection.getUri(), OccupancyLevel.UNSUPPORTED);
+                RouteLegEnd arrival = new RouteLegEnd(mStationProvider.getStationByUri(it.arrivalConnection.getArrivalStationUri()),
+                                                      it.arrivalConnection.getArrivalTime(), "?", true, Duration.standardSeconds(quad.arrivalConnection.getArrivalDelay()), false, it.arrivalConnection.getDelayedArrivalTime().isBeforeNow(),
+                                                      it.arrivalConnection.getArrivalStationUri(), OccupancyLevel.UNSUPPORTED);
+                RouteLeg r = new RouteLeg(RouteLegType.TRAIN, new VehicleStub(basename(quad.departureConnection.getRoute()), quad.departureConnection.getDirection(), quad.departureConnection.getTrip()), departure, arrival);
                 legs.add(r);
 
                 it = getFirstReachableConnection(it);
@@ -388,7 +387,7 @@ public class RouteResponseListener implements IRailSuccessResponseListener<Linke
     }
 
     private StationQuadruple getFirstReachableConnection(StationQuadruple arrivalQuad) {
-        List<StationQuadruple> it_options = S.get(arrivalQuad.arrivalConnection.arrivalStationUri);
+        List<StationQuadruple> it_options = S.get(arrivalQuad.arrivalConnection.getArrivalStationUri());
         int i = it_options.size() - 1;
         // Find the next hop. This is the first reachable hop,
         // or even stricter defined: the hop which will get us to the destination at the same arrival time.

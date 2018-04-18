@@ -6,7 +6,6 @@ import android.net.NetworkInfo;
 import android.support.annotation.NonNull;
 import android.util.Log;
 
-import com.android.volley.Cache;
 import com.android.volley.DefaultRetryPolicy;
 import com.android.volley.Request;
 import com.android.volley.RequestQueue;
@@ -19,7 +18,6 @@ import com.android.volley.toolbox.Volley;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Duration;
-import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.ISODateTimeFormat;
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -81,83 +79,14 @@ public class LinkedConnectionsProvider {
         getLinkedConnectionByUrl(url, successListener, errorListener, tag);
     }
 
-    public void getLinkedConnectionsByDateForTimeSpan(DateTime startTime, DateTime endTime, final IRailSuccessResponseListener<LinkedConnections> successListener, final IRailErrorResponseListener errorListener, Object tag) {
+    public void queryLinkedConnections(DateTime startTime, final QueryResponseListener.LinkedConnectionsQuery query) {
+        QueryResponseListener responseListener = new QueryResponseListener(this, query);
+        getLinkedConnectionsByDate(startTime, responseListener, responseListener, null);
+    }
 
-        final int calls = (int) (new Duration(startTime, endTime).getStandardMinutes() / 10);
-        final LinkedConnections[] results = new LinkedConnections[calls];
-        final int[] threadStatus = new int[calls];
-
-        int i = 0;
-        for (DateTime current = new DateTime(startTime); current.isBefore(endTime); current = current.plusMinutes(10)) {
-            final int id = i;
-            threadStatus[i] = 1;
-            getLinkedConnectionsByDate(current, new IRailSuccessResponseListener<LinkedConnections>() {
-                @Override
-                public void onSuccessResponse(@NonNull LinkedConnections data, Object tag) {
-                    results[id] = data;
-                    Log.d("LCProvider", "Compiling larger page, received " + data.current + " STORE " + id);
-                    List<LinkedConnection> connections = new ArrayList<>();
-                    LinkedConnections resultPage = new LinkedConnections();
-
-                    for (int j = 0; j < calls; j++) {
-                        if (j != id && threadStatus[j] != 2) {
-                            threadStatus[id] = 2;
-                            return;
-                        }
-                        connections.addAll(Arrays.asList(results[j].connections));
-                    }
-                    threadStatus[id] = 2;
-
-                    LinkedConnection[] linkedConnections = new LinkedConnection[connections.size()];
-                    resultPage.connections = connections.toArray(linkedConnections);
-
-                    Arrays.sort(resultPage.connections, new Comparator<LinkedConnection>() {
-                        @Override
-                        public int compare(LinkedConnection o1, LinkedConnection o2) {
-                            return o1.departureTime.compareTo(o2.departureTime);
-                        }
-                    });
-
-                    resultPage.previous = results[0].previous;
-                    resultPage.current = results[0].current;
-                    resultPage.next = results[calls - 1].next;
-                    successListener.onSuccessResponse(resultPage, tag);
-                }
-            }, new IRailErrorResponseListener() {
-                @Override
-                public void onErrorResponse(@NonNull Exception e, Object tag) {
-                    results[id] = new LinkedConnections();
-                    Log.d("LCProvider", "Compiling larger page, failed to receive STORE " + id);
-                    List<LinkedConnection> connections = new ArrayList<>();
-                    LinkedConnections resultPage = new LinkedConnections();
-
-                    for (int j = 0; j < calls; j++) {
-                        if (j != id && threadStatus[j] != 2) {
-                            threadStatus[id] = 2;
-                            return;
-                        }
-                        connections.addAll(Arrays.asList(results[j].connections));
-                    }
-                    threadStatus[id] = 2;
-
-                    LinkedConnection[] linkedConnections = new LinkedConnection[connections.size()];
-                    resultPage.connections = connections.toArray(linkedConnections);
-
-                    Arrays.sort(resultPage.connections, new Comparator<LinkedConnection>() {
-                        @Override
-                        public int compare(LinkedConnection o1, LinkedConnection o2) {
-                            return o1.departureTime.compareTo(o2.departureTime);
-                        }
-                    });
-
-                    resultPage.previous = results[0].previous;
-                    resultPage.current = results[0].current;
-                    resultPage.next = results[calls - 1].next;
-                    successListener.onSuccessResponse(resultPage, tag);
-                }
-            }, tag);
-            i++;
-        }
+    public void getLinkedConnectionsByDateForTimeSpan(DateTime startTime, final DateTime endTime, final IRailSuccessResponseListener<LinkedConnections> successListener, final IRailErrorResponseListener errorListener, Object tag) {
+        TimespanQueryResponseListener listener = new TimespanQueryResponseListener(endTime, successListener, errorListener, tag);
+        queryLinkedConnections(startTime, listener);
     }
 
 
@@ -228,7 +157,7 @@ public class LinkedConnectionsProvider {
             if (cache == null) {
                 Log.w("LCProvider", "Not in cache");
             } else {
-                Log.w("LCProvider", "Cache is " + ( new Duration(cache.createdAt,DateTime.now()).getStandardSeconds()) + "sec old");
+                Log.w("LCProvider", "Cache is " + (new Duration(cache.createdAt, DateTime.now()).getStandardSeconds()) + "sec old");
             }
         }
 
@@ -261,26 +190,26 @@ public class LinkedConnectionsProvider {
 
             LinkedConnection connection = new LinkedConnection();
 
-            connection.uri = entry.getString("@id");
+            connection.setUri(entry.getString("@id"));
 
-            connection.departureStationUri = entry.getString("departureStop");
-            connection.departureTime = DateTime.parse(entry.getString("departureTime")).withZone(DateTimeZone.forID("Europe/Brussels"));
-            connection.departureDelay = 0;
+            connection.setDepartureStationUri(entry.getString("departureStop"));
+            connection.setDepartureTime(DateTime.parse(entry.getString("departureTime")).withZone(DateTimeZone.forID("Europe/Brussels")));
+            connection.setDepartureDelay(0);
             if (entry.has("departureDelay")) {
-                connection.departureDelay = entry.getInt("departureDelay");
+                connection.setDepartureDelay(entry.getInt("departureDelay"));
             }
 
-            connection.arrivalStationUri = entry.getString("arrivalStop");
-            connection.arrivalTime = DateTime.parse(entry.getString("arrivalTime")).withZone(DateTimeZone.forID("Europe/Brussels"));
+            connection.setArrivalStationUri(entry.getString("arrivalStop"));
+            connection.setArrivalTime(DateTime.parse(entry.getString("arrivalTime")).withZone(DateTimeZone.forID("Europe/Brussels")));
 
-            connection.arrivalDelay = 0;
+            connection.setArrivalDelay(0);
             if (entry.has("arrivalDelay")) {
-                connection.arrivalDelay = entry.getInt("arrivalDelay");
+                connection.setArrivalDelay(entry.getInt("arrivalDelay"));
             }
 
-            connection.direction = entry.getString("direction");
-            connection.route = entry.getString("gtfs:route");
-            connection.trip = entry.getString("gtfs:trip");
+            connection.setDirection(entry.getString("direction"));
+            connection.setRoute(entry.getString("gtfs:route"));
+            connection.setTrip(entry.getString("gtfs:trip"));
 
             connections.add(connection);
         }
@@ -290,7 +219,7 @@ public class LinkedConnectionsProvider {
         Arrays.sort(result.connections, new Comparator<LinkedConnection>() {
             @Override
             public int compare(LinkedConnection o1, LinkedConnection o2) {
-                return o1.departureTime.compareTo(o2.departureTime);
+                return o1.getDepartureTime().compareTo(o2.getDepartureTime());
             }
         });
         return result;

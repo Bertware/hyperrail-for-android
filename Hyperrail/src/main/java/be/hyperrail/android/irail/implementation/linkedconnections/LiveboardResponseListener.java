@@ -70,16 +70,16 @@ public class LiveboardResponseListener implements IRailSuccessResponseListener<L
         }
 
         for (LinkedConnection connection : data.connections) {
-            if (connection.departureStationUri.equals(request.getStation().getUri())) {
+            if (connection.getDepartureStationUri().equals(request.getStation().getUri())) {
                 departures.add(connection);
             }
-            if (connection.arrivalStationUri.equals(request.getStation().getUri())) {
+            if (connection.getArrivalStationUri().equals(request.getStation().getUri())) {
                 arrivals.add(connection);
                 departureIndexForArrivals.add(departures.size());
             }
         }
 
-        if (request.getType() == Liveboard.LiveboardType.DEPARTURES && departures.size() >= 1 || request.getType() == ARRIVALS && arrivals.size() >= 1) {
+        if (request.getType() == Liveboard.LiveboardType.DEPARTURES && departures.size() > 0 || request.getType() == ARRIVALS && arrivals.size() > 0) {
             VehicleStop[] stoparray = generateStopArray();
             Liveboard liveboard = new Liveboard(request.getStation(), stoparray, request.getSearchTime(), request.getType(), request.getTimeDefinition());
             liveboard.setPageInfo(new PagedResourceDescriptor(previous, current, next));
@@ -116,7 +116,7 @@ public class LiveboardResponseListener implements IRailSuccessResponseListener<L
             boolean foundMatchingDeparture = false;
 
             for (int j = departureIndexForArrivals.get(i); j < departures.size() && !foundMatchingDeparture; j++) {
-                if (Objects.equals(arrivals.get(i).trip, departures.get(j).trip)) {
+                if (Objects.equals(arrivals.get(i).getTrip(), departures.get(j).getTrip())) {
                     foundMatchingDeparture = true;
 
                     LinkedConnection departure = departures.get(j);
@@ -126,23 +126,23 @@ public class LiveboardResponseListener implements IRailSuccessResponseListener<L
                     handledConnections.add(arrival);
 
                     Station direction = IrailFactory.getStationsProviderInstance().getStationByName(
-                            departure.direction);
+                            departure.getDirection());
 
                     stops.add(new VehicleStop(request.getStation(), direction,
                                               new VehicleStub(
-                                                      basename(departure.route),
-                                                      departure.direction,
-                                                      departure.route),
+                                                      basename(departure.getRoute()),
+                                                      departure.getDirection(),
+                                                      departure.getRoute()),
                                               "?",
                                               true,
-                                              departure.departureTime,
-                                              arrival.arrivalTime,
-                                              Duration.standardSeconds(departure.departureDelay),
-                                              Duration.standardSeconds(arrival.arrivalDelay),
+                                              departure.getDepartureTime(),
+                                              arrival.getArrivalTime(),
+                                              Duration.standardSeconds(departure.getDepartureDelay()),
+                                              Duration.standardSeconds(arrival.getArrivalDelay()),
                                               false,
                                               false,
                                               departure.getDelayedDepartureTime().isAfterNow(),
-                                              departure.uri,
+                                              departure.getUri(),
                                               OccupancyLevel.UNSUPPORTED,
                                               VehicleStopType.STOP));
                 }
@@ -157,22 +157,22 @@ public class LiveboardResponseListener implements IRailSuccessResponseListener<L
 
                 LinkedConnection departure = departures.get(i);
                 Station direction = mStationProvider.getStationByName(
-                        departure.direction);
+                        departure.getDirection());
 
                 stops.add(new VehicleStop(request.getStation(), direction, new VehicleStub(
-                        basename(departure.route),
-                        departure.direction,
-                        departure.route),
+                        basename(departure.getRoute()),
+                        departure.getDirection(),
+                        departure.getRoute()),
                                           "?",
                                           true,
-                                          departure.departureTime,
+                                          departure.getDepartureTime(),
                                           null,
-                                          Duration.standardSeconds(departure.departureDelay),
+                                          Duration.standardSeconds(departure.getDepartureDelay()),
                                           null,
                                           false,
                                           false,
-                                          departure.getDelayedDepartureTime().isAfterNow(),
-                                          departure.uri,
+                                          departure.getDelayedDepartureTime().isBeforeNow(),
+                                          departure.getUri(),
                                           OccupancyLevel.UNSUPPORTED,
                                           VehicleStopType.DEPARTURE));
 
@@ -186,26 +186,26 @@ public class LiveboardResponseListener implements IRailSuccessResponseListener<L
             });
         } else {
             for (int i = 0; i < arrivals.size(); i++) {
-                if (!handledConnections.contains(arrivals.get(i))) {
+                if (handledConnections.contains(arrivals.get(i))) {
                     continue;
                 }
                 LinkedConnection arrival = arrivals.get(i);
                 Station direction = request.getStation();
 
                 stops.add(new VehicleStop(request.getStation(), direction, new VehicleStub(
-                        basename(arrival.route),
+                        basename(arrival.getRoute()),
                         direction.getLocalizedName(),
-                        arrival.route),
+                        arrival.getRoute()),
                                           "?",
                                           true,
                                           null,
-                                          arrival.arrivalTime,
+                                          arrival.getArrivalTime(),
                                           null,
-                                          Duration.standardSeconds(arrival.arrivalDelay),
+                                          Duration.standardSeconds(arrival.getArrivalDelay()),
                                           false,
                                           false,
-                                          arrival.getDelayedArrivalTime().isAfterNow(),
-                                          arrival.uri,
+                                          arrival.getDelayedArrivalTime().isBeforeNow(),
+                                          arrival.getUri(),
                                           OccupancyLevel.UNSUPPORTED,
                                           VehicleStopType.ARRIVAL));
 

@@ -19,6 +19,7 @@ import be.hyperrail.android.irail.implementation.linkedconnections.LinkedConnect
 import be.hyperrail.android.irail.implementation.linkedconnections.LiveboardExtendHelper;
 import be.hyperrail.android.irail.implementation.linkedconnections.LiveboardResponseListener;
 import be.hyperrail.android.irail.implementation.linkedconnections.RouteResponseListener;
+import be.hyperrail.android.irail.implementation.linkedconnections.VehicleQueryResponseListener;
 import be.hyperrail.android.irail.implementation.linkedconnections.VehicleResponseListener;
 import be.hyperrail.android.irail.implementation.requests.ExtendLiveboardRequest;
 import be.hyperrail.android.irail.implementation.requests.ExtendRoutesRequest;
@@ -199,7 +200,8 @@ public class LinkedConnectionsApi implements IrailDataProvider {
     private void getVehicle(@NonNull final IrailVehicleRequest request) {
         Log.i(LOGTAG, "Loading train...");
         VehicleResponseListener listener = new VehicleResponseListener(request, mStationsProvider);
-        mLinkedConnectionsProvider.getLinkedConnectionsByDateForTimeSpan(request.getSearchTime().withTimeAtStartOfDay().withHourOfDay(3), request.getSearchTime().withTimeAtStartOfDay().plusDays(1).withHourOfDay(3), listener, listener, null);
+        VehicleQueryResponseListener query = new VehicleQueryResponseListener("http://irail.be/vehicle/" + request.getVehicleId(), listener, listener, request.getTag());
+        mLinkedConnectionsProvider.queryLinkedConnections(request.getSearchTime().withTimeAtStartOfDay().withHourOfDay(3), query);
     }
 
     @Override
