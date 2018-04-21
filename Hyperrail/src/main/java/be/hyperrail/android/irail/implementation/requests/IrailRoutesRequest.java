@@ -11,6 +11,7 @@ import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 
 import org.joda.time.DateTime;
+import org.joda.time.format.ISODateTimeFormat;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -138,5 +139,10 @@ public class IrailRoutesRequest extends IrailBaseRequest<RouteResult> implements
 
         IrailRoutesRequest o = (IrailRoutesRequest) other;
         return getOrigin().equals(o.getOrigin()) && getDestination().equals(o.getDestination());
+    }
+
+    @Override
+    public String toString() {
+        return origin.getName() + "/" + destination.getName() + "/" + getSearchTime().toString(ISODateTimeFormat.basicDateTimeNoMillis()) + "/" + timeDefinition;
     }
 }

@@ -15,6 +15,7 @@ import java.util.Objects;
 import be.hyperrail.android.irail.contracts.IRailErrorResponseListener;
 import be.hyperrail.android.irail.contracts.IRailSuccessResponseListener;
 import be.hyperrail.android.irail.contracts.IrailStationProvider;
+import be.hyperrail.android.irail.contracts.MeteredApi;
 import be.hyperrail.android.irail.contracts.OccupancyLevel;
 import be.hyperrail.android.irail.contracts.StationNotResolvedException;
 import be.hyperrail.android.irail.implementation.Route;
@@ -53,6 +54,7 @@ public class RouteResponseListener implements IRailSuccessResponseListener<Linke
     // The earliest arrival time for the partial journey departing in the earliest scanned connection of the corresponding trip
     // Size m, where m is the number of trips
     HashMap<String, TrainTriple> T = new HashMap<>();
+    private Object mTag;
 
     public RouteResponseListener(LinkedConnectionsProvider linkedConnectionsProvider, IrailStationProvider stationProvider, IrailRoutesRequest request, DateTime departureLimit) {
         mLinkedConnectionsProvider = linkedConnectionsProvider;
@@ -341,9 +343,10 @@ public class RouteResponseListener implements IRailSuccessResponseListener<Linke
         if (!S.containsKey(mRoutesRequest.getOrigin().getUri())) {
             if (hasPassedDepartureLimit) {
                 RouteResult result = new RouteResult(mRoutesRequest.getOrigin(), mRoutesRequest.getDestination(), mRoutesRequest.getSearchTime(), mRoutesRequest.getTimeDefinition(), new Route[0]);
+                ((MeteredApi.MeteredRequest) mTag).setMsecParsed(DateTime.now().getMillis());
                 mRoutesRequest.notifySuccessListeners(result);
             } else {
-                mLinkedConnectionsProvider.getLinkedConnectionByUrl(data.previous, this, this, null);
+                mLinkedConnectionsProvider.getLinkedConnectionByUrl(data.previous, this, this, mTag);
             }
             return;
         }
@@ -360,18 +363,28 @@ public class RouteResponseListener implements IRailSuccessResponseListener<Linke
 
             while (!Objects.equals(it.arrivalConnection.getArrivalStationUri(), mRoutesRequest.getDestination().getUri())) {
                 RouteLegEnd departure = new RouteLegEnd(mStationProvider.getStationByUri(it.departureConnection.getDepartureStationUri()),
-                                                        it.departureConnection.getDepartureTime(), "?", true, Duration.standardSeconds(quad.departureConnection.getDepartureDelay()), false, it.departureConnection.getDelayedDepartureTime().isBeforeNow(),
+                                                        it.departureConnection.getDepartureTime(), "?", true, Duration.standardSeconds(it.departureConnection.getDepartureDelay()), false, it.departureConnection.getDelayedDepartureTime().isBeforeNow(),
                                                         it.departureConnection.getUri(), OccupancyLevel.UNSUPPORTED);
                 RouteLegEnd arrival = new RouteLegEnd(mStationProvider.getStationByUri(it.arrivalConnection.getArrivalStationUri()),
-                                                      it.arrivalConnection.getArrivalTime(), "?", true, Duration.standardSeconds(quad.arrivalConnection.getArrivalDelay()), false, it.arrivalConnection.getDelayedArrivalTime().isBeforeNow(),
+                                                      it.arrivalConnection.getArrivalTime(), "?", true, Duration.standardSeconds(it.arrivalConnection.getArrivalDelay()), false, it.arrivalConnection.getDelayedArrivalTime().isBeforeNow(),
                                                       it.arrivalConnection.getArrivalStationUri(), OccupancyLevel.UNSUPPORTED);
-                RouteLeg r = new RouteLeg(RouteLegType.TRAIN, new VehicleStub(basename(quad.departureConnection.getRoute()), quad.departureConnection.getDirection(), quad.departureConnection.getTrip()), departure, arrival);
+                RouteLeg r = new RouteLeg(RouteLegType.TRAIN, new VehicleStub(basename(it.departureConnection.getRoute()), it.departureConnection.getDirection(), it.departureConnection.getTrip()), departure, arrival);
                 legs.add(r);
 
                 it = getFirstReachableConnection(it);
             }
 
+            RouteLegEnd departure = new RouteLegEnd(mStationProvider.getStationByUri(it.departureConnection.getDepartureStationUri()),
+                                                    it.departureConnection.getDepartureTime(), "?", true, Duration.standardSeconds(it.departureConnection.getDepartureDelay()), false, it.departureConnection.getDelayedDepartureTime().isBeforeNow(),
+                                                    it.departureConnection.getUri(), OccupancyLevel.UNSUPPORTED);
+            RouteLegEnd arrival = new RouteLegEnd(mStationProvider.getStationByUri(it.arrivalConnection.getArrivalStationUri()),
+                                                  it.arrivalConnection.getArrivalTime(), "?", true, Duration.standardSeconds(it.arrivalConnection.getArrivalDelay()), false, it.arrivalConnection.getDelayedArrivalTime().isBeforeNow(),
+                                                  it.arrivalConnection.getArrivalStationUri(), OccupancyLevel.UNSUPPORTED);
+            RouteLeg r = new RouteLeg(RouteLegType.TRAIN, new VehicleStub(basename(it.departureConnection.getRoute()), it.departureConnection.getDirection(), it.departureConnection.getTrip()), departure, arrival);
+            legs.add(r);
+
             RouteLeg[] legsArray = new RouteLeg[legs.size()];
+            legsArray = legs.toArray(legsArray);
             routes[i++] = new Route(legsArray);
         }
 
@@ -383,6 +396,7 @@ public class RouteResponseListener implements IRailSuccessResponseListener<Linke
         });
 
         RouteResult result = new RouteResult(mRoutesRequest.getOrigin(), mRoutesRequest.getDestination(), mRoutesRequest.getSearchTime(), mRoutesRequest.getTimeDefinition(), routes);
+        ((MeteredApi.MeteredRequest) mTag).setMsecParsed(DateTime.now().getMillis());
         mRoutesRequest.notifySuccessListeners(result);
     }
 
@@ -400,9 +414,13 @@ public class RouteResponseListener implements IRailSuccessResponseListener<Linke
 
     @Override
     public void onSuccessResponse(@NonNull LinkedConnections data, Object tag) {
+        mTag = tag;
         try {
+            ((MeteredApi.MeteredRequest) tag).setMsecUsableNetworkResponse(DateTime.now().getMillis());
             process(data);
         } catch (StationNotResolvedException e) {
+            ((MeteredApi.MeteredRequest) tag).setMsecParsed(DateTime.now().getMillis());
+            ((MeteredApi.MeteredRequest) tag).setResponseType(MeteredApi.RESPONSE_FAILED);
             mRoutesRequest.notifyErrorListeners(e);
         }
     }

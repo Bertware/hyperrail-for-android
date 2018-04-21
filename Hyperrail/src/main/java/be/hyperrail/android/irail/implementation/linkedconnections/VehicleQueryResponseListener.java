@@ -8,6 +8,7 @@ import java.util.Objects;
 
 import be.hyperrail.android.irail.contracts.IRailErrorResponseListener;
 import be.hyperrail.android.irail.contracts.IRailSuccessResponseListener;
+import be.hyperrail.android.irail.contracts.MeteredApi;
 
 /**
  * A query for linkedconnections related to a certain vehicle. Stop after the vehicle hasn't been seen for 2 hours, only return relevant connections.
@@ -59,6 +60,7 @@ public class VehicleQueryResponseListener implements QueryResponseListener.Linke
             resultObject.previous = previous;
             resultObject.next = data.next;
             mSuccessListener.onSuccessResponse(resultObject, mTag);
+            ((MeteredApi.MeteredRequest) mTag).setMsecParsed(DateTime.now().getMillis());
             return 0;
         }
 
@@ -68,5 +70,7 @@ public class VehicleQueryResponseListener implements QueryResponseListener.Linke
     @Override
     public void onQueryFailed(Exception e, Object tag) {
         mErrorListener.onErrorResponse(e, tag);
+        ((MeteredApi.MeteredRequest) tag).setMsecParsed(DateTime.now().getMillis());
+        ((MeteredApi.MeteredRequest) tag).setResponseType(MeteredApi.RESPONSE_FAILED);
     }
 }

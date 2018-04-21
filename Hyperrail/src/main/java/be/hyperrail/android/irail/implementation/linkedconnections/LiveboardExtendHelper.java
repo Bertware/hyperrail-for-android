@@ -5,6 +5,7 @@ import android.support.annotation.NonNull;
 import be.hyperrail.android.irail.contracts.IRailErrorResponseListener;
 import be.hyperrail.android.irail.contracts.IRailSuccessResponseListener;
 import be.hyperrail.android.irail.contracts.IrailStationProvider;
+import be.hyperrail.android.irail.contracts.MeteredApi;
 import be.hyperrail.android.irail.contracts.PagedResourceDescriptor;
 import be.hyperrail.android.irail.implementation.Liveboard;
 import be.hyperrail.android.irail.implementation.requests.ExtendLiveboardRequest;
@@ -18,12 +19,14 @@ public class LiveboardExtendHelper implements IRailSuccessResponseListener<Liveb
     private final LinkedConnectionsProvider mLinkedConnectionsProvider;
     private final IrailStationProvider mStationProvider;
     private final ExtendLiveboardRequest mRequest;
+    private final MeteredApi.MeteredRequest mMeteredRequest;
     private Liveboard mLiveboard;
 
-    public LiveboardExtendHelper(LinkedConnectionsProvider linkedConnectionsProvider, IrailStationProvider stationProvider, ExtendLiveboardRequest request) {
+    public LiveboardExtendHelper(LinkedConnectionsProvider linkedConnectionsProvider, IrailStationProvider stationProvider, ExtendLiveboardRequest request, MeteredApi.MeteredRequest meteredRequest) {
         mLinkedConnectionsProvider = linkedConnectionsProvider;
         mStationProvider = stationProvider;
         mRequest = request;
+        mMeteredRequest = meteredRequest;
     }
 
     public void extend() {
@@ -45,13 +48,13 @@ public class LiveboardExtendHelper implements IRailSuccessResponseListener<Liveb
                                                                                  mLiveboard.getLiveboardType(),
                                                                                  mLiveboard.getSearchTime());
 
-        liveboardRequest.setCallback(this, this, mRequest.getTag());
+        liveboardRequest.setCallback(this, this, mMeteredRequest);
         LiveboardResponseListener listener = new LiveboardResponseListener(mLinkedConnectionsProvider, mStationProvider, liveboardRequest);
 
         mLinkedConnectionsProvider.getLinkedConnectionByUrl(url,
                                                             listener,
                                                             listener,
-                                                            mRequest.getTag());
+                                                            mMeteredRequest);
 
     }
 

@@ -12,15 +12,39 @@
 
 package be.hyperrail.android.irail.factories;
 
+import android.app.AlertDialog;
 import android.content.Context;
+import android.content.DialogInterface;
+import android.content.Intent;
 import android.preference.PreferenceManager;
+import android.util.Log;
 import android.widget.Toast;
 
+import com.android.volley.AuthFailureError;
+import com.android.volley.DefaultRetryPolicy;
+import com.android.volley.NetworkResponse;
+import com.android.volley.Request;
+import com.android.volley.RequestQueue;
+import com.android.volley.Response;
+import com.android.volley.ServerError;
+import com.android.volley.VolleyError;
+import com.android.volley.toolbox.HttpHeaderParser;
+import com.android.volley.toolbox.StringRequest;
+import com.android.volley.toolbox.Volley;
 import com.google.firebase.crash.FirebaseCrash;
 import com.google.firebase.perf.metrics.AddTrace;
 
+import org.joda.time.DateTime;
+import org.joda.time.format.DateTimeFormat;
+
+import java.io.UnsupportedEncodingException;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
+
 import be.hyperrail.android.irail.contracts.IrailDataProvider;
 import be.hyperrail.android.irail.contracts.IrailStationProvider;
+import be.hyperrail.android.irail.contracts.MeteredApi;
 import be.hyperrail.android.irail.db.StationsDb;
 import be.hyperrail.android.irail.implementation.IrailApi;
 import be.hyperrail.android.irail.implementation.Lc2IrailApi;
@@ -37,11 +61,12 @@ public class IrailFactory {
 
     private static IrailStationProvider stationProviderInstance;
     private static IrailDataProvider dataProviderInstance;
+    private static RequestQueue mRq;
 
     @AddTrace(name = "IrailFactory.setup")
     public static void setup(Context applicationContext) {
         stationProviderInstance = new StationsDb(applicationContext);
-
+        logMeteredApiData(applicationContext);
         String api = PreferenceManager.getDefaultSharedPreferences(applicationContext).getString("api", "irail");
         switch (api) {
             case "irail":
@@ -74,5 +99,75 @@ public class IrailFactory {
             throw new IllegalStateException();
         }
         return dataProviderInstance;
+    }
+
+    private static void logMeteredApiData(Context context) {
+        if (dataProviderInstance == null) {
+            return;
+        }
+        IrailDataProvider provider = getDataProviderInstance();
+        if (!(provider instanceof MeteredApi)) {
+            return;
+        }
+
+        final StringBuilder body = new StringBuilder();
+        MeteredApi.MeteredRequest[] requests = ((MeteredApi) provider).getMeteredRequests();
+        for (MeteredApi.MeteredRequest request : requests) {
+            body.append(request.toString()).append("\n");
+        }
+
+        Log.d("IrailFactory", body.toString());
+        if (mRq == null) {
+            mRq = Volley.newRequestQueue(context);
+        }
+        final String name = getDataProviderInstance().getClass().getName();
+        new AlertDialog.Builder(context).setMessage("Testresultaten opslaan?").setPositiveButton("Ja", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                post(name, body.toString());
+            }
+        }).setNegativeButton("Nee",null).show();
+
+    }
+
+    private static void post(final String name, final String data) {
+        String url = "https://log.thesis.bertmarcelis.be/post.php";
+        final String TAG = "POSTDATA";
+        //String uri = String.format(Locale.US, URL);
+        StringRequest stringRequest = new StringRequest(Request.Method.POST, url,
+                                                        new com.android.volley.Response.Listener<String>() {
+                                                            @Override
+                                                            public void onResponse(String response) {
+                                                                Log.d(TAG, "String Success :" + response);
+                                                            }
+                                                        },
+                                                        new com.android.volley.Response.ErrorListener() {
+                                                            @Override
+                                                            public void onErrorResponse(VolleyError error) {
+                                                                Log.d(TAG, "String  Error In Request :" + error.toString());
+                                                            }
+                                                        }) {
+            @Override
+            protected Response<String> parseNetworkResponse(NetworkResponse response) {
+                return super.parseNetworkResponse(response);
+            }
+
+            @Override
+            public byte[] getBody() throws AuthFailureError {
+                return data.getBytes();
+            }
+
+            @Override
+            public Map<String, String> getHeaders() throws AuthFailureError {
+                HashMap<String, String> headers = new HashMap<String, String>();
+                String AuthToken = "903825";
+                headers.put("auth", AuthToken);
+                headers.put("source", name);
+                return headers;
+            }
+        };
+        stringRequest.setRetryPolicy(new DefaultRetryPolicy(15000, DefaultRetryPolicy.DEFAULT_MAX_RETRIES,
+                                                            DefaultRetryPolicy.DEFAULT_BACKOFF_MULT));
+        mRq.add(stringRequest);
     }
 }

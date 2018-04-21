@@ -6,11 +6,15 @@ import android.util.Log;
 
 import org.joda.time.DateTime;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import be.hyperrail.android.BuildConfig;
 import be.hyperrail.android.irail.contracts.IRailErrorResponseListener;
 import be.hyperrail.android.irail.contracts.IRailSuccessResponseListener;
 import be.hyperrail.android.irail.contracts.IrailDataProvider;
 import be.hyperrail.android.irail.contracts.IrailStationProvider;
+import be.hyperrail.android.irail.contracts.MeteredApi;
 import be.hyperrail.android.irail.contracts.PagedResourceDescriptor;
 import be.hyperrail.android.irail.contracts.RouteTimeDefinition;
 import be.hyperrail.android.irail.factories.IrailFactory;
@@ -37,12 +41,13 @@ import static be.hyperrail.android.irail.implementation.Liveboard.LiveboardType.
 /**
  * This API loads linkedConnection data and builds responses based on this data
  */
-public class LinkedConnectionsApi implements IrailDataProvider {
+public class LinkedConnectionsApi implements IrailDataProvider, MeteredApi {
 
     private final IrailStationProvider mStationsProvider;
     private final LinkedConnectionsProvider mLinkedConnectionsProvider;
     private Context mContext;
     private static final String LOGTAG = "LinkedConnectionsApi";
+    List<MeteredRequest> mMeteredRequests = new ArrayList<>();
 
     public LinkedConnectionsApi(Context context) {
         this.mContext = context;
@@ -67,11 +72,16 @@ public class LinkedConnectionsApi implements IrailDataProvider {
     }
 
     private void getLiveboard(@NonNull final IrailLiveboardRequest request) {
+        MeteredRequest meteredRequest = new MeteredRequest();
+        meteredRequest.setTag(request.toString());
+        meteredRequest.setMsecStart(DateTime.now().getMillis());
+        mMeteredRequests.add(meteredRequest);
+
         LiveboardResponseListener listener = new LiveboardResponseListener(mLinkedConnectionsProvider, mStationsProvider, request);
         mLinkedConnectionsProvider.getLinkedConnectionsByDate(request.getSearchTime(),
                                                               listener,
                                                               listener,
-                                                              request.getTag());
+                                                              meteredRequest);
     }
 
     @Override
@@ -83,7 +93,12 @@ public class LinkedConnectionsApi implements IrailDataProvider {
     }
 
     private void extendLiveboard(@NonNull final ExtendLiveboardRequest request) {
-        LiveboardExtendHelper helper = new LiveboardExtendHelper(mLinkedConnectionsProvider, mStationsProvider, request);
+        MeteredRequest meteredRequest = new MeteredRequest();
+        meteredRequest.setTag(request.toString());
+        meteredRequest.setMsecStart(DateTime.now().getMillis());
+        mMeteredRequests.add(meteredRequest);
+
+        LiveboardExtendHelper helper = new LiveboardExtendHelper(mLinkedConnectionsProvider, mStationsProvider, request, meteredRequest);
         helper.extend();
     }
 
@@ -105,6 +120,10 @@ public class LinkedConnectionsApi implements IrailDataProvider {
     }
 
     private void getRoutes(@NonNull IrailRoutesRequest request) {
+        MeteredRequest meteredRequest = new MeteredRequest();
+        meteredRequest.setTag(request.toString());
+        meteredRequest.setMsecStart(DateTime.now().getMillis());
+        mMeteredRequests.add(meteredRequest);
 
         DateTime departureLimit;
 
@@ -117,9 +136,9 @@ public class LinkedConnectionsApi implements IrailDataProvider {
         RouteResponseListener listener = new RouteResponseListener(mLinkedConnectionsProvider, mStationsProvider, request, departureLimit);
 
         if (request.getTimeDefinition() == RouteTimeDefinition.DEPART_AT) {
-            mLinkedConnectionsProvider.getLinkedConnectionsByDateForTimeSpan(request.getSearchTime(), request.getSearchTime().plusHours(6), listener, listener, null);
+            mLinkedConnectionsProvider.getLinkedConnectionsByDateForTimeSpan(request.getSearchTime(), request.getSearchTime().plusHours(6), listener, listener, meteredRequest);
         } else {
-            mLinkedConnectionsProvider.getLinkedConnectionsByDateForTimeSpan(request.getSearchTime().minusHours(1), request.getSearchTime(), listener, listener, null);
+            mLinkedConnectionsProvider.getLinkedConnectionsByDateForTimeSpan(request.getSearchTime().minusHours(1), request.getSearchTime(), listener, listener, meteredRequest);
         }
     }
 
@@ -179,7 +198,7 @@ public class LinkedConnectionsApi implements IrailDataProvider {
             public void onSuccessResponse(@NonNull Liveboard data, Object tag) {
                 for (VehicleStop stop :
                         data.getStops()) {
-                    if (stop.getDepartureSemanticId().equals(request.getStop().getDepartureSemanticId())) {
+                    if (stop.getDepartureUri().equals(request.getStop().getDepartureUri())) {
                         request.notifySuccessListeners(stop);
                         return;
                     }
@@ -198,10 +217,14 @@ public class LinkedConnectionsApi implements IrailDataProvider {
     }
 
     private void getVehicle(@NonNull final IrailVehicleRequest request) {
-        Log.i(LOGTAG, "Loading train...");
+        MeteredRequest meteredRequest = new MeteredRequest();
+        meteredRequest.setTag(request.toString());
+        meteredRequest.setMsecStart(DateTime.now().getMillis());
+        mMeteredRequests.add(meteredRequest);
+
         VehicleResponseListener listener = new VehicleResponseListener(request, mStationsProvider);
-        VehicleQueryResponseListener query = new VehicleQueryResponseListener("http://irail.be/vehicle/" + request.getVehicleId(), listener, listener, request.getTag());
-        mLinkedConnectionsProvider.queryLinkedConnections(request.getSearchTime().withTimeAtStartOfDay().withHourOfDay(3), query);
+        VehicleQueryResponseListener query = new VehicleQueryResponseListener("http://irail.be/vehicle/" + request.getVehicleId(), listener, listener, meteredRequest);
+        mLinkedConnectionsProvider.queryLinkedConnections(request.getSearchTime().withTimeAtStartOfDay().withHourOfDay(3), query, meteredRequest);
     }
 
     @Override
@@ -220,4 +243,9 @@ public class LinkedConnectionsApi implements IrailDataProvider {
         return url.substring(url.lastIndexOf('/') + 1);
     }
 
+    @Override
+    public MeteredRequest[] getMeteredRequests() {
+        MeteredRequest[] meteredRequests = new MeteredRequest[mMeteredRequests.size()];
+        return mMeteredRequests.toArray(meteredRequests);
+    }
 }

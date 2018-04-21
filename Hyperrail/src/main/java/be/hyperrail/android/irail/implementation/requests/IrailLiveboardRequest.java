@@ -22,6 +22,8 @@ import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 
 import org.joda.time.DateTime;
+import org.joda.time.format.DateTimeFormat;
+import org.joda.time.format.ISODateTimeFormat;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -165,4 +167,8 @@ public class IrailLiveboardRequest extends IrailBaseRequest<Liveboard> implement
         return getStation().compareTo(other.getStation());
     }
 
+    @Override
+    public String toString() {
+        return station.getName() + "/" + getSearchTime().toString(ISODateTimeFormat.basicDateTimeNoMillis()) + "/" + timeDefinition + "/" + type;
+    }
 }

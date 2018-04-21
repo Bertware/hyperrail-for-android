@@ -10,6 +10,7 @@ import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 
 import org.joda.time.DateTime;
+import org.joda.time.format.ISODateTimeFormat;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -51,7 +52,7 @@ public class IrailVehicleRequest extends IrailBaseRequest<Vehicle> implements Ir
     /**
      * Create a request for train departures or arrivals in a given station
      *
-     * @param vehicleId    The train for which data should be retrieved
+     * @param vehicleId  The train for which data should be retrieved
      * @param searchTime The time for which should be searched
      */
     // TODO: support between stations, target scroll station as optional (display) parameters
@@ -166,5 +167,10 @@ public class IrailVehicleRequest extends IrailBaseRequest<Vehicle> implements Ir
     @Override
     public boolean equalsIgnoringTime(IrailRequest other) {
         return other instanceof IrailVehicleRequest && getVehicleId().equals(((IrailVehicleRequest) other).getVehicleId());
+    }
+
+    @Override
+    public String toString() {
+        return getVehicleId() + "/" + getSearchTime().toString(ISODateTimeFormat.basicDateTimeNoMillis());
     }
 }

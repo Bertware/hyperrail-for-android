@@ -181,7 +181,6 @@ public class Lc2IrailParser {
         }
 
         return new VehicleStop(request.getStation(),
-                               stationProvider.getStationByName(vehicle.headsign),
                                vehicle,
                                platform,
                                true,
@@ -305,7 +304,6 @@ public class Lc2IrailParser {
         }
 
         return new VehicleStop(station,
-                               stationProvider.getStationByName(vehicle.headsign),
                                vehicle,
                                platform,
                                isPlatformNormal,

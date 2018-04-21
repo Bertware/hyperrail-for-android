@@ -7,11 +7,15 @@ import android.support.annotation.NonNull;
 import android.util.Log;
 
 import com.android.volley.DefaultRetryPolicy;
+import com.android.volley.NoConnectionError;
 import com.android.volley.Request;
 import com.android.volley.RequestQueue;
 import com.android.volley.Response;
 import com.android.volley.RetryPolicy;
 import com.android.volley.VolleyError;
+import com.android.volley.toolbox.BasicNetwork;
+import com.android.volley.toolbox.DiskBasedCache;
+import com.android.volley.toolbox.HurlStack;
 import com.android.volley.toolbox.JsonObjectRequest;
 import com.android.volley.toolbox.Volley;
 
@@ -23,6 +27,7 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -34,6 +39,11 @@ import java.util.Objects;
 import be.hyperrail.android.BuildConfig;
 import be.hyperrail.android.irail.contracts.IRailErrorResponseListener;
 import be.hyperrail.android.irail.contracts.IRailSuccessResponseListener;
+import be.hyperrail.android.irail.contracts.MeteredApi;
+
+import static be.hyperrail.android.irail.contracts.MeteredApi.RESPONSE_CACHED;
+import static be.hyperrail.android.irail.contracts.MeteredApi.RESPONSE_OFFLINE;
+import static be.hyperrail.android.irail.contracts.MeteredApi.RESPONSE_ONLINE;
 
 /**
  * Created in be.hyperrail.android.irail.implementation.linkedconnections on 15/03/2018.
@@ -58,7 +68,13 @@ public class LinkedConnectionsProvider {
 
     public LinkedConnectionsProvider(Context context) {
         this.mLinkedConnectionsOfflineCache = new LinkedConnectionsOfflineCache(context);
-        this.requestQueue = Volley.newRequestQueue(context);
+
+        BasicNetwork network;
+        network = new BasicNetwork(new HurlStack());
+        File cacheDir = new File(context.getCacheDir(), "volley");
+        this.requestQueue = new RequestQueue(new DiskBasedCache(cacheDir, 48 * 1024 * 1024), network);
+        requestQueue.start();
+
         this.requestPolicy = new DefaultRetryPolicy(
                 1000,
                 2,
@@ -79,14 +95,14 @@ public class LinkedConnectionsProvider {
         getLinkedConnectionByUrl(url, successListener, errorListener, tag);
     }
 
-    public void queryLinkedConnections(DateTime startTime, final QueryResponseListener.LinkedConnectionsQuery query) {
+    public void queryLinkedConnections(DateTime startTime, final QueryResponseListener.LinkedConnectionsQuery query, Object tag) {
         QueryResponseListener responseListener = new QueryResponseListener(this, query);
-        getLinkedConnectionsByDate(startTime, responseListener, responseListener, null);
+        getLinkedConnectionsByDate(startTime, responseListener, responseListener, tag);
     }
 
     public void getLinkedConnectionsByDateForTimeSpan(DateTime startTime, final DateTime endTime, final IRailSuccessResponseListener<LinkedConnections> successListener, final IRailErrorResponseListener errorListener, Object tag) {
         TimespanQueryResponseListener listener = new TimespanQueryResponseListener(endTime, successListener, errorListener, tag);
-        queryLinkedConnections(startTime, listener);
+        queryLinkedConnections(startTime, listener, tag);
     }
 
 
@@ -147,6 +163,7 @@ public class LinkedConnectionsProvider {
         LinkedConnectionsOfflineCache.CachedLinkedConnections cache = mLinkedConnectionsOfflineCache.load(url);
         if (cache != null && cache.createdAt.isAfter(DateTime.now().minusSeconds(60))) {
             try {
+                ((MeteredApi.MeteredRequest)tag).setResponseType(RESPONSE_CACHED);
                 Log.w("LCProvider", "Fulfilled without network");
                 volleySuccessListener.onResponse(new JSONObject(cache.data));
                 return;
@@ -157,18 +174,25 @@ public class LinkedConnectionsProvider {
             if (cache == null) {
                 Log.w("LCProvider", "Not in cache");
             } else {
-                Log.w("LCProvider", "Cache is " + (new Duration(cache.createdAt, DateTime.now()).getStandardSeconds()) + "sec old");
+                Log.w("LCProvider", "Cache is " + (new Duration(cache.createdAt, DateTime.now()).getStandardSeconds()) + "sec old, getting new");
             }
         }
 
-        jsObjRequest.setShouldCache(mCacheEnabled);
-        jsObjRequest.setRetryPolicy(requestPolicy);
-        //Log.i(LOGTAG, "Cached? " + url + ": " + (requestQueue.getCache().get(url) == null ? "empty" : (requestQueue.getCache().get(url).isExpired() ? "expired" : "valid")));
-        requestQueue.add(jsObjRequest);
+       if (isInternetAvailable()) {
+           ((MeteredApi.MeteredRequest)tag).setResponseType(RESPONSE_ONLINE);
+            jsObjRequest.setShouldCache(mCacheEnabled);
+            jsObjRequest.setRetryPolicy(requestPolicy);
+            //Log.i(LOGTAG, "Cached? " + url + ": " + (requestQueue.getCache().get(url) == null ? "empty" : (requestQueue.getCache().get(url).isExpired() ? "expired" : "valid")));
+            requestQueue.add(jsObjRequest);
+        } else {
+           ((MeteredApi.MeteredRequest)tag).setResponseType(RESPONSE_OFFLINE);
+            volleyErrorListener.onErrorResponse(new NoConnectionError());
+        }
     }
 
     @NonNull
-    private LinkedConnections getLinkedConnectionsFromJson(JSONObject response) throws JSONException {
+    private LinkedConnections getLinkedConnectionsFromJson(JSONObject response) throws
+            JSONException {
         LinkedConnections result = new LinkedConnections();
         result.current = response.getString("@id");
         result.next = response.getString("hydra:next");

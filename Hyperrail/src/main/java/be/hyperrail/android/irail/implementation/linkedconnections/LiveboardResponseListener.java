@@ -3,6 +3,7 @@ package be.hyperrail.android.irail.implementation.linkedconnections;
 import android.support.annotation.NonNull;
 import android.util.Log;
 
+import org.joda.time.DateTime;
 import org.joda.time.Duration;
 
 import java.util.ArrayList;
@@ -13,6 +14,8 @@ import java.util.Objects;
 import be.hyperrail.android.irail.contracts.IRailErrorResponseListener;
 import be.hyperrail.android.irail.contracts.IRailSuccessResponseListener;
 import be.hyperrail.android.irail.contracts.IrailStationProvider;
+import be.hyperrail.android.irail.contracts.MeteredApi;
+import be.hyperrail.android.irail.contracts.MeteredApi.MeteredRequest;
 import be.hyperrail.android.irail.contracts.OccupancyLevel;
 import be.hyperrail.android.irail.contracts.PagedResourceDescriptor;
 import be.hyperrail.android.irail.contracts.RouteTimeDefinition;
@@ -55,13 +58,15 @@ public class LiveboardResponseListener implements IRailSuccessResponseListener<L
     @Override
     public void onSuccessResponse(@NonNull LinkedConnections data, Object tag) {
 
+        ((MeteredRequest) tag).setMsecUsableNetworkResponse(DateTime.now().getMillis());
+
         if (current == null) {
             previous = data.previous;
             current = data.current;
             next = data.next;
         }
 
-        if (request.getTimeDefinition() == RouteTimeDefinition.DEPART_AT){
+        if (request.getTimeDefinition() == RouteTimeDefinition.DEPART_AT) {
             // Moving forward through pages
             next = data.next;
         } else {
@@ -84,6 +89,7 @@ public class LiveboardResponseListener implements IRailSuccessResponseListener<L
             Liveboard liveboard = new Liveboard(request.getStation(), stoparray, request.getSearchTime(), request.getType(), request.getTimeDefinition());
             liveboard.setPageInfo(new PagedResourceDescriptor(previous, current, next));
             request.notifySuccessListeners(liveboard);
+            ((MeteredRequest) tag).setMsecParsed(DateTime.now().getMillis());
         } else {
             String link = data.next;
             // When searching for "arrive before", we need to look backwards
@@ -106,6 +112,8 @@ public class LiveboardResponseListener implements IRailSuccessResponseListener<L
     @Override
     public void onErrorResponse(@NonNull Exception e, Object tag) {
         request.notifyErrorListeners(e);
+        ((MeteredRequest) tag).setMsecParsed(DateTime.now().getMillis());
+        ((MeteredApi.MeteredRequest) tag).setResponseType(MeteredApi.RESPONSE_FAILED);
     }
 
     private VehicleStop[] generateStopArray() {
@@ -128,10 +136,16 @@ public class LiveboardResponseListener implements IRailSuccessResponseListener<L
                     Station direction = IrailFactory.getStationsProviderInstance().getStationByName(
                             departure.getDirection());
 
-                    stops.add(new VehicleStop(request.getStation(), direction,
+                    String headsign;
+                    if (direction == null) {
+                        headsign = departure.getDirection();
+                    } else {
+                        headsign = direction.getLocalizedName();
+                    }
+                    stops.add(new VehicleStop(request.getStation(),
                                               new VehicleStub(
                                                       basename(departure.getRoute()),
-                                                      departure.getDirection(),
+                                                      headsign,
                                                       departure.getRoute()),
                                               "?",
                                               true,
@@ -158,10 +172,15 @@ public class LiveboardResponseListener implements IRailSuccessResponseListener<L
                 LinkedConnection departure = departures.get(i);
                 Station direction = mStationProvider.getStationByName(
                         departure.getDirection());
-
-                stops.add(new VehicleStop(request.getStation(), direction, new VehicleStub(
+                String headsign;
+                if (direction == null) {
+                    headsign = departure.getDirection();
+                } else {
+                    headsign = direction.getLocalizedName();
+                }
+                stops.add(new VehicleStop(request.getStation(), new VehicleStub(
                         basename(departure.getRoute()),
-                        departure.getDirection(),
+                        headsign,
                         departure.getRoute()),
                                           "?",
                                           true,
@@ -192,7 +211,7 @@ public class LiveboardResponseListener implements IRailSuccessResponseListener<L
                 LinkedConnection arrival = arrivals.get(i);
                 Station direction = request.getStation();
 
-                stops.add(new VehicleStop(request.getStation(), direction, new VehicleStub(
+                stops.add(new VehicleStop(request.getStation(), new VehicleStub(
                         basename(arrival.getRoute()),
                         direction.getLocalizedName(),
                         arrival.getRoute()),

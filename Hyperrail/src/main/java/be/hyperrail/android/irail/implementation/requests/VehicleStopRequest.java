@@ -8,6 +8,7 @@ package be.hyperrail.android.irail.implementation.requests;
 
 import android.support.annotation.NonNull;
 
+import org.joda.time.format.ISODateTimeFormat;
 import org.json.JSONException;
 import org.json.JSONObject;
 

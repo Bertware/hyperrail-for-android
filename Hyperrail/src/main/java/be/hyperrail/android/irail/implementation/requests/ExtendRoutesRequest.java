@@ -8,6 +8,8 @@ package be.hyperrail.android.irail.implementation.requests;
 
 import android.support.annotation.NonNull;
 
+import org.joda.time.format.ISODateTimeFormat;
+
 import be.hyperrail.android.irail.contracts.IrailRequest;
 import be.hyperrail.android.irail.implementation.RouteResult;
 
@@ -51,5 +53,10 @@ public class ExtendRoutesRequest extends IrailBaseRequest<RouteResult> implement
     public enum Action {
         APPEND,
         PREPEND
+    }
+
+    @Override
+    public String toString() {
+        return "extend/" + routes.getOrigin().getName() + "/" + routes.getDestination().getName() + "/" + routes.getSearchTime().toString(ISODateTimeFormat.basicDateTimeNoMillis()) + "/" + routes.getTimeDefinition();
     }
 }
