@@ -32,6 +32,7 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
+import android.provider.Settings;
 import android.support.annotation.IntDef;
 import android.support.annotation.NonNull;
 import android.support.annotation.StringRes;
@@ -51,6 +52,7 @@ import be.hyperrail.android.fragments.LiveboardSearchFragment;
 import be.hyperrail.android.fragments.RouteSearchFragment;
 import be.hyperrail.android.fragments.VehicleSearchFragment;
 import be.hyperrail.android.fragments.searchresult.DisturbanceListFragment;
+import be.hyperrail.android.irail.factories.IrailFactory;
 
 /**
  * The main activity contains a drawer layout and fragments for search, disturbances and settings
@@ -114,6 +116,9 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
 
         final Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
+
+        // TESTING PURPOSES
+        IrailFactory.setup(this);
 
         setTitle(R.string.app_name);
         mDualPane = (findViewById(R.id.drawer) == null);

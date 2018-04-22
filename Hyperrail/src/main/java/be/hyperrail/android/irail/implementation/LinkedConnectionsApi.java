@@ -136,7 +136,13 @@ public class LinkedConnectionsApi implements IrailDataProvider, MeteredApi {
         RouteResponseListener listener = new RouteResponseListener(mLinkedConnectionsProvider, mStationsProvider, request, departureLimit);
 
         if (request.getTimeDefinition() == RouteTimeDefinition.DEPART_AT) {
-            mLinkedConnectionsProvider.getLinkedConnectionsByDateForTimeSpan(request.getSearchTime(), request.getSearchTime().plusHours(6), listener, listener, meteredRequest);
+            DateTime end = request.getSearchTime();
+            if (end.getHourOfDay() < 18 && end.getHourOfDay() >= 6){
+                end = request.getSearchTime().plusHours(4);
+            } else {
+                end = request.getSearchTime().plusHours(6);
+            }
+            mLinkedConnectionsProvider.getLinkedConnectionsByDateForTimeSpan(request.getSearchTime(), end, listener, listener, meteredRequest);
         } else {
             mLinkedConnectionsProvider.getLinkedConnectionsByDateForTimeSpan(request.getSearchTime().minusHours(1), request.getSearchTime(), listener, listener, meteredRequest);
         }

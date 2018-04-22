@@ -12,14 +12,14 @@ public interface MeteredApi {
 
     class MeteredRequest {
         private String mTag;
-        private long mBytesSent;
-        private long mBytesReceived;
-        private long mMsecStart;
-        private long mMsecUsableResult;
-        private long mMsecParsed;
+        private long mBytesSent = 0;
+        private long mBytesReceived = 0;
+        private long mMsecStart = 0;
+        private long mMsecUsableResult = 0;
+        private long mMsecParsed = 0;
         private int mResponseType;
-        private long rxBbytesAtStart;
-        private long txBbytesAtStart;
+        private long rxBbytesAtStart = 0;
+        private long txBbytesAtStart = 0;
 
         public MeteredRequest() {
 
@@ -55,43 +55,43 @@ public interface MeteredApi {
 
         public void setMsecStart(long msecStart) {
             mMsecStart = msecStart;
+            rxBbytesAtStart = TrafficStats.getTotalRxBytes();
+            txBbytesAtStart = TrafficStats.getTotalTxBytes();
         }
 
         public void setMsecUsableNetworkResponse(long msecFirstByte) {
             if (mMsecUsableResult == 0) {
                 mMsecUsableResult = msecFirstByte;
-                rxBbytesAtStart = TrafficStats.getTotalRxBytes();
-                txBbytesAtStart = TrafficStats.getTotalTxBytes();
             }
         }
 
         public void setMsecParsed(long msecParsed) {
             if (mMsecParsed == 0) {
                 mMsecParsed = msecParsed;
-                mBytesReceived = TrafficStats.getTotalRxBytes() - rxBbytesAtStart;
-                mBytesSent = TrafficStats.getTotalTxBytes() - txBbytesAtStart;
             }
+            mBytesReceived = TrafficStats.getTotalRxBytes() - rxBbytesAtStart;
+            mBytesSent = TrafficStats.getTotalTxBytes() - txBbytesAtStart;
         }
 
         public int getResponseType() {
             return mResponseType;
         }
 
-        public String getResponseTypeList() {
+        String getResponseTypeList() {
             String result = "";
             if ((mResponseType & 1) == 1) {
-                result += "Online,";
+                result += "Online;";
             }
             if ((mResponseType & 2) == 2) {
-                result += "Cached,";
+                result += "Cached;";
             }
             if ((mResponseType & 4) == 4) {
-                result += "Offline,";
+                result += "Offline;";
             }
             if ((mResponseType & 8) == 8) {
                 result += "Failed";
             }
-            if (result.endsWith(",")) {
+            if (result.endsWith(";")) {
                 result = result.substring(0, result.length() - 1);
             }
             return result;

@@ -18,6 +18,7 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.preference.PreferenceManager;
 import android.util.Log;
+import android.view.WindowManager;
 import android.widget.Toast;
 
 import com.android.volley.AuthFailureError;
@@ -62,12 +63,18 @@ public class IrailFactory {
     private static IrailStationProvider stationProviderInstance;
     private static IrailDataProvider dataProviderInstance;
     private static RequestQueue mRq;
+    private static String lastCreated = "";
 
     @AddTrace(name = "IrailFactory.setup")
     public static void setup(Context applicationContext) {
+        String api = PreferenceManager.getDefaultSharedPreferences(applicationContext).getString("api", "irail");
+        if (lastCreated.equals(api)){
+            return;
+        }
+        lastCreated = api;
         stationProviderInstance = new StationsDb(applicationContext);
         logMeteredApiData(applicationContext);
-        String api = PreferenceManager.getDefaultSharedPreferences(applicationContext).getString("api", "irail");
+
         switch (api) {
             case "irail":
                 dataProviderInstance = new IrailApi(applicationContext);
@@ -126,8 +133,7 @@ public class IrailFactory {
             public void onClick(DialogInterface dialog, int which) {
                 post(name, body.toString());
             }
-        }).setNegativeButton("Nee",null).show();
-
+        }).setNegativeButton("Nee", null).show();
     }
 
     private static void post(final String name, final String data) {

@@ -41,7 +41,6 @@ import be.hyperrail.android.irail.factories.IrailFactory;
  * API Guide</a> for more information on developing a Settings UI.
  */
 public class SettingsActivity extends AppCompatActivity {
-    SharedPreferences.OnSharedPreferenceChangeListener listener;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -61,16 +60,6 @@ public class SettingsActivity extends AppCompatActivity {
         getFragmentManager().beginTransaction()
                 .replace(R.id.preferences_content, new SettingsFragment())
                 .commit();
-
-        listener = new SharedPreferences.OnSharedPreferenceChangeListener() {
-            @Override
-            public void onSharedPreferenceChanged(SharedPreferences sharedPreferences, String key) {
-                if (key.equals("api")) {
-                    IrailFactory.setup(SettingsActivity.this);
-                }
-            }
-        };
-        PreferenceManager.getDefaultSharedPreferences(this).registerOnSharedPreferenceChangeListener(listener);
 
     }
 
