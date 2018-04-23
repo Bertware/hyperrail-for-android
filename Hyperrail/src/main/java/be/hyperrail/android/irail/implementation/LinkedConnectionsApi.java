@@ -1,21 +1,23 @@
 package be.hyperrail.android.irail.implementation;
 
 import android.content.Context;
+import android.os.AsyncTask;
 import android.support.annotation.NonNull;
-import android.util.Log;
 
 import org.joda.time.DateTime;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.List;
 
-import be.hyperrail.android.BuildConfig;
+import be.hyperrail.android.R;
 import be.hyperrail.android.irail.contracts.IRailErrorResponseListener;
 import be.hyperrail.android.irail.contracts.IRailSuccessResponseListener;
 import be.hyperrail.android.irail.contracts.IrailDataProvider;
 import be.hyperrail.android.irail.contracts.IrailStationProvider;
 import be.hyperrail.android.irail.contracts.MeteredApi;
-import be.hyperrail.android.irail.contracts.PagedResourceDescriptor;
 import be.hyperrail.android.irail.contracts.RouteTimeDefinition;
 import be.hyperrail.android.irail.factories.IrailFactory;
 import be.hyperrail.android.irail.implementation.irailapi.RouteAppendHelper;
@@ -137,7 +139,7 @@ public class LinkedConnectionsApi implements IrailDataProvider, MeteredApi {
 
         if (request.getTimeDefinition() == RouteTimeDefinition.DEPART_AT) {
             DateTime end = request.getSearchTime();
-            if (end.getHourOfDay() < 18 && end.getHourOfDay() >= 6){
+            if (end.getHourOfDay() < 18 && end.getHourOfDay() >= 6) {
                 end = request.getSearchTime().plusHours(4);
             } else {
                 end = request.getSearchTime().plusHours(6);
@@ -223,14 +225,8 @@ public class LinkedConnectionsApi implements IrailDataProvider, MeteredApi {
     }
 
     private void getVehicle(@NonNull final IrailVehicleRequest request) {
-        MeteredRequest meteredRequest = new MeteredRequest();
-        meteredRequest.setTag(request.toString());
-        meteredRequest.setMsecStart(DateTime.now().getMillis());
-        mMeteredRequests.add(meteredRequest);
-
-        VehicleResponseListener listener = new VehicleResponseListener(request, mStationsProvider);
-        VehicleQueryResponseListener query = new VehicleQueryResponseListener("http://irail.be/vehicle/" + request.getVehicleId(), listener, listener, meteredRequest);
-        mLinkedConnectionsProvider.queryLinkedConnections(request.getSearchTime().withTimeAtStartOfDay().withHourOfDay(3), query, meteredRequest);
+        startVehicleRequestTask startVehicleRequestTask = new startVehicleRequestTask(this);
+        startVehicleRequestTask.execute(request);
     }
 
     @Override
@@ -254,4 +250,53 @@ public class LinkedConnectionsApi implements IrailDataProvider, MeteredApi {
         MeteredRequest[] meteredRequests = new MeteredRequest[mMeteredRequests.size()];
         return mMeteredRequests.toArray(meteredRequests);
     }
+
+    static class startVehicleRequestTask extends AsyncTask<IrailVehicleRequest, Void, Void> {
+
+        private final WeakReference<LinkedConnectionsApi> mApi;
+
+        startVehicleRequestTask(LinkedConnectionsApi api){
+            mApi = new WeakReference<>(api);
+        }
+
+        @Override
+        protected Void doInBackground(IrailVehicleRequest... requests) {
+
+            if (mApi.get() == null){
+                return null;
+            }
+            LinkedConnectionsApi api = mApi.get();
+
+            IrailVehicleRequest request = requests[0];
+            MeteredRequest meteredRequest = new MeteredRequest();
+            meteredRequest.setTag(request.toString());
+            meteredRequest.setMsecStart(DateTime.now().getMillis());
+            api.mMeteredRequests.add(meteredRequest);
+
+            VehicleResponseListener listener = new VehicleResponseListener(request, api.mStationsProvider);
+            VehicleQueryResponseListener query = new VehicleQueryResponseListener("http://irail.be/vehicle/" + request.getVehicleId(), listener, listener, meteredRequest);
+
+            ArrayList<String> departures = new ArrayList<>();
+            try (InputStream in = api.mContext.getResources().openRawResource(R.raw.firstdepartures)) {
+                java.util.Scanner s = new java.util.Scanner(in).useDelimiter("\\A");
+                while (s.hasNextLine()) departures.add(s.nextLine());
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            DateTime departureTime = request.getSearchTime().withTimeAtStartOfDay().withHourOfDay(3);
+            for (String departure : departures) {
+                if (departure.split(" ")[0].equals(request.getVehicleId())) {
+                    departureTime = request.getSearchTime().withTimeAtStartOfDay()
+                            .withHourOfDay(Integer.valueOf(departure.split(" ")[1]))
+                            .withMinuteOfHour(Integer.valueOf(departure.split(" ")[2]));
+                    break;
+                }
+            }
+
+            api.mLinkedConnectionsProvider.queryLinkedConnections(departureTime, query, meteredRequest);
+            return null;
+        }
+    }
+
+
 }

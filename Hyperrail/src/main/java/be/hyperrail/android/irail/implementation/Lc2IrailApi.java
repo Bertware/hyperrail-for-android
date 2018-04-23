@@ -81,7 +81,7 @@ public class Lc2IrailApi implements IrailDataProvider, MeteredApi {
         requestQueue.start();
 
         this.requestPolicy = new DefaultRetryPolicy(
-                500,
+                1000,
                 2,
                 DefaultRetryPolicy.DEFAULT_BACKOFF_MULT
         );
@@ -377,7 +377,16 @@ public class Lc2IrailApi implements IrailDataProvider, MeteredApi {
                 return headers;
             }
         };
-        jsObjRequest.setRetryPolicy(requestPolicy);
+        if (!url.contains("vehicle")) {
+            jsObjRequest.setRetryPolicy(requestPolicy);
+        } else {
+            jsObjRequest.setRetryPolicy(new DefaultRetryPolicy(
+                    5000,
+                    1,
+                    DefaultRetryPolicy.DEFAULT_BACKOFF_MULT
+            ));
+        }
+
         jsObjRequest.setTag(TAG_IRAIL_API_GET);
 
         if (isInternetAvailable()) {
