@@ -74,16 +74,8 @@ public class LinkedConnectionsApi implements IrailDataProvider, MeteredApi {
     }
 
     private void getLiveboard(@NonNull final IrailLiveboardRequest request) {
-        MeteredRequest meteredRequest = new MeteredRequest();
-        meteredRequest.setTag(request.toString());
-        meteredRequest.setMsecStart(DateTime.now().getMillis());
-        mMeteredRequests.add(meteredRequest);
-
-        LiveboardResponseListener listener = new LiveboardResponseListener(mLinkedConnectionsProvider, mStationsProvider, request);
-        mLinkedConnectionsProvider.getLinkedConnectionsByDate(request.getSearchTime(),
-                                                              listener,
-                                                              listener,
-                                                              meteredRequest);
+        StartLiveboardRequestTask task = new StartLiveboardRequestTask(this);
+        task.execute(request);
     }
 
     @Override
@@ -225,8 +217,8 @@ public class LinkedConnectionsApi implements IrailDataProvider, MeteredApi {
     }
 
     private void getVehicle(@NonNull final IrailVehicleRequest request) {
-        startVehicleRequestTask startVehicleRequestTask = new startVehicleRequestTask(this);
-        startVehicleRequestTask.execute(request);
+        StartVehicleRequestTask StartVehicleRequestTask = new StartVehicleRequestTask(this);
+        StartVehicleRequestTask.execute(request);
     }
 
     @Override
@@ -251,18 +243,18 @@ public class LinkedConnectionsApi implements IrailDataProvider, MeteredApi {
         return mMeteredRequests.toArray(meteredRequests);
     }
 
-    static class startVehicleRequestTask extends AsyncTask<IrailVehicleRequest, Void, Void> {
+    static class StartVehicleRequestTask extends AsyncTask<IrailVehicleRequest, Void, Void> {
 
         private final WeakReference<LinkedConnectionsApi> mApi;
 
-        startVehicleRequestTask(LinkedConnectionsApi api){
+        StartVehicleRequestTask(LinkedConnectionsApi api) {
             mApi = new WeakReference<>(api);
         }
 
         @Override
         protected Void doInBackground(IrailVehicleRequest... requests) {
 
-            if (mApi.get() == null){
+            if (mApi.get() == null) {
                 return null;
             }
             LinkedConnectionsApi api = mApi.get();
@@ -294,6 +286,36 @@ public class LinkedConnectionsApi implements IrailDataProvider, MeteredApi {
             }
 
             api.mLinkedConnectionsProvider.queryLinkedConnections(departureTime, query, meteredRequest);
+            return null;
+        }
+    }
+
+    static class StartLiveboardRequestTask extends AsyncTask<IrailLiveboardRequest, Void, Void> {
+
+        private final WeakReference<LinkedConnectionsApi> mApi;
+
+        StartLiveboardRequestTask(LinkedConnectionsApi api) {
+            mApi = new WeakReference<>(api);
+        }
+
+        @Override
+        protected Void doInBackground(IrailLiveboardRequest... requests) {
+
+            if (mApi.get() == null) {
+                return null;
+            }
+            LinkedConnectionsApi api = mApi.get();
+            IrailLiveboardRequest request = requests[0];
+            MeteredRequest meteredRequest = new MeteredRequest();
+            meteredRequest.setTag(request.toString());
+            meteredRequest.setMsecStart(DateTime.now().getMillis());
+            api.mMeteredRequests.add(meteredRequest);
+
+            LiveboardResponseListener listener = new LiveboardResponseListener(api.mLinkedConnectionsProvider, api.mStationsProvider, request);
+            api.mLinkedConnectionsProvider.getLinkedConnectionsByDate(request.getSearchTime(),
+                                                                      listener,
+                                                                      listener,
+                                                                      meteredRequest);
             return null;
         }
     }
