@@ -14,7 +14,7 @@
                     android:previewImage="@drawable/widget_nextdepartures_preview"
                     android:initialLayout="@layout/widget_nextdepartures"
                     android:initialKeyguardLayout="@layout/widget_nextdepartures"
-                    android:configure="be.hyperrail.research.activities.NextDeparturesWidgetConfiguration"
+                    android:configure="be.bertmarcelis.thesis.activities.NextDeparturesWidgetConfiguration"
                     android:resizeMode="horizontal|vertical"
                     android:widgetCategory="home_screen">
 </appwidget-provider>

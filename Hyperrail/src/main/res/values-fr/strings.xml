@@ -5,7 +5,8 @@
   -->
 
 <resources>
-    <string name="app_name">HyperRail</string>
+    <string name="app_name">HyperRail Research</string>
+    <string name="powered_by_irail_be">RESEARCH VERSION\nPowered by irail.be</string>
     <string name="action_from">Nouvelle route d’ici</string>
     <string name="action_mark_as_favorite">Marquez comme favori</string>
     <string name="action_share">Partager cette recherche</string>
@@ -51,7 +52,6 @@
     <string name="warning_not_realtime">Vous voyez les résultats pour</string>
     <string name="warning_not_realtime_datetime">EEE dd/MM/yyyy HH:mm</string>
     <string name="permission_description_location_title">Localisation des gares à proximité</string>
-    <string name="powered_by_irail_be">Propulsé par irail.be</string>
     <string name="action_search">Cherche</string>
     <string name="search_station_name">Nom de la gare</string>
     <string name="status_cancelled">Annulé</string>

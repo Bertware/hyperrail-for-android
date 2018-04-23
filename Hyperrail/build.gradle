@@ -8,14 +8,14 @@ apply plugin: 'com.android.application'
 apply plugin: 'com.google.firebase.firebase-perf'
 apply plugin: 'com.google.firebase.firebase-crash'
 
-def VERSION_CODE = 30
-def VERSION_NAME = 'Research-LC-0.9.0-HR1.0.8#31'
+def VERSION_CODE = 31
+def VERSION_NAME = 'Research-LC-0.9.1-HR1.0.8#31'
 
 android {
     compileSdkVersion 27
     buildToolsVersion '27.0.3'
     defaultConfig {
-        applicationId "be.hyperrail.android"
+        applicationId "be.bertmarcelis.thesis"
         minSdkVersion 19
         targetSdkVersion 27
         versionCode VERSION_CODE
