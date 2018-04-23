@@ -16,7 +16,7 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:layout_below="@id/dotTab"
-        tools:context="be.hyperrail.android.activities.FirstLaunchGuide" />
+        tools:context="be.hyperrail.research.activities.FirstLaunchGuide" />
 
     <android.support.design.widget.TabLayout
         android:id="@+id/dotTab"

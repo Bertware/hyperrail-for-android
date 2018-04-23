@@ -15,8 +15,8 @@
         tools:targetApi="25">
         <intent
             android:action="android.intent.action.VIEW"
-            android:targetClass="be.hyperrail.android.activities.MainActivity"
-            android:targetPackage="be.hyperrail.android">
+            android:targetClass="be.hyperrail.research.activities.MainActivity"
+            android:targetPackage="be.hyperrail.research">
             <extra
                 android:name="view"
                 android:value="0" />
@@ -36,8 +36,8 @@
         tools:targetApi="25">
         <intent
             android:action="android.intent.action.VIEW"
-            android:targetClass="be.hyperrail.android.activities.MainActivity"
-            android:targetPackage="be.hyperrail.android">
+            android:targetClass="be.hyperrail.research.activities.MainActivity"
+            android:targetPackage="be.hyperrail.research">
             <extra
                 android:name="view"
                 android:value="10" />

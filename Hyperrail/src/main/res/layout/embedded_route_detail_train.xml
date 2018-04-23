@@ -5,11 +5,11 @@
   ~ file, You can obtain one at http://mozilla.org/MPL/2.0/.
   -->
 
-<be.hyperrail.android.viewgroup.RouteTrainItemLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<be.hyperrail.research.viewgroup.RouteTrainItemLayout xmlns:android="http://schemas.android.com/apk/res/android"
                                                      android:id="@+id/binder"
                                                      android:layout_width="match_parent"
                                                      android:layout_height="wrap_content"
     >
 
     <include layout="@layout/item_route_detail_train"/>
-</be.hyperrail.android.viewgroup.RouteTrainItemLayout>
+</be.hyperrail.research.viewgroup.RouteTrainItemLayout>
