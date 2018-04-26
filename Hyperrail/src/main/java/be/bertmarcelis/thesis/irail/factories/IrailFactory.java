@@ -67,7 +67,7 @@ public class IrailFactory {
 
     @AddTrace(name = "IrailFactory.setup")
     public static void setup(Context applicationContext) {
-        String api = PreferenceManager.getDefaultSharedPreferences(applicationContext).getString("api", "irail");
+        String api = PreferenceManager.getDefaultSharedPreferences(applicationContext).getString("api", "lc2irail");
         if (lastCreated.equals(api)){
             return;
         }

@@ -134,7 +134,7 @@ public class LiveboardFragment extends RecyclerViewFragment<Liveboard> implement
 
         mRequest.setCallback(new IRailSuccessResponseListener<Liveboard>() {
             @Override
-            public void onSuccessResponse(@NonNull Liveboard data, Object tag) {
+            public void onSuccessResponse(@NonNull final Liveboard data, Object tag) {
                 vRefreshLayout.setRefreshing(false);
 
                 // store retrieved data
@@ -142,24 +142,35 @@ public class LiveboardFragment extends RecyclerViewFragment<Liveboard> implement
                 // Show retrieved data
                 showData(mCurrentLiveboard);
 
-                // If we didn't get a result, try the next data
-                if (data.getStops().length == 0) {
-                    LiveboardFragment.this.loadNextRecyclerviewItems();
-                } else {
-                    // Enable infinite scrolling again
-                    mLiveboardCardAdapter.setInfiniteScrolling(true);
-                }
+if (getActivity() != null)
+                getActivity().runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        // If we didn't get a result, try the next data
+                        if (data.getStops().length == 0) {
+                            LiveboardFragment.this.loadNextRecyclerviewItems();
+                        } else {
+                            // Enable infinite scrolling again
+                            mLiveboardCardAdapter.setInfiniteScrolling(true);
+                        }
 
-                // Scroll past the load earlier item
-                ((LinearLayoutManager) vRecyclerView.getLayoutManager()).scrollToPositionWithOffset(1, 0);
+                        // Scroll past the load earlier item
+                        ((LinearLayoutManager) vRecyclerView.getLayoutManager()).scrollToPositionWithOffset(1, 0);
+                    }
+                });
             }
 
         }, new IRailErrorResponseListener() {
             @Override
-            public void onErrorResponse(@NonNull Exception e, Object tag) {
-                vRefreshLayout.setRefreshing(false);
-                // only finish if we're loading new data
-                ErrorDialogFactory.showErrorDialog(e, LiveboardFragment.this.getActivity(), mCurrentLiveboard == null);
+            public void onErrorResponse(@NonNull final Exception e, Object tag) {if (getActivity() != null)
+                getActivity().runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        vRefreshLayout.setRefreshing(false);
+                        // only finish if we're loading new data
+                        ErrorDialogFactory.showErrorDialog(e, LiveboardFragment.this.getActivity(), mCurrentLiveboard == null);
+                    }
+                });
             }
         }, null);
         api.getLiveboard(mRequest);
@@ -188,17 +199,29 @@ public class LiveboardFragment extends RecyclerViewFragment<Liveboard> implement
                 mLiveboardCardAdapter.setNextLoaded();
 
                 // Scroll past the "load earlier"
-                LinearLayoutManager mgr = ((LinearLayoutManager) vRecyclerView.getLayoutManager());
-                if (mgr.findFirstVisibleItemPosition() == 0) {
-                    mgr.scrollToPositionWithOffset(1, 0);
-                }
+                if (getActivity() != null)
+                getActivity().runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        LinearLayoutManager mgr = ((LinearLayoutManager) vRecyclerView.getLayoutManager());
+                        if (mgr.findFirstVisibleItemPosition() == 0) {
+                            mgr.scrollToPositionWithOffset(1, 0);
+                        }
+                    }
+                });
             }
+
         }, new IRailErrorResponseListener() {
             @Override
-            public void onErrorResponse(@NonNull Exception e, Object tag) {
-                ErrorDialogFactory.showErrorDialog(e, LiveboardFragment.this.getActivity(), false);
-                mLiveboardCardAdapter.setNextError(true);
-                mLiveboardCardAdapter.setNextLoaded();
+            public void onErrorResponse(@NonNull final Exception e, Object tag) {if (getActivity() != null)
+                getActivity().runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        ErrorDialogFactory.showErrorDialog(e, LiveboardFragment.this.getActivity(), false);
+                        mLiveboardCardAdapter.setNextError(true);
+                        mLiveboardCardAdapter.setNextLoaded();
+                    }
+                });
             }
         }, null);
         IrailFactory.getDataProviderInstance().extendLiveboard(request);
@@ -215,29 +238,43 @@ public class LiveboardFragment extends RecyclerViewFragment<Liveboard> implement
         ExtendLiveboardRequest request = new ExtendLiveboardRequest(mCurrentLiveboard, ExtendLiveboardRequest.Action.PREPEND);
         request.setCallback(new IRailSuccessResponseListener<Liveboard>() {
             @Override
-            public void onSuccessResponse(@NonNull Liveboard data, Object tag) {
+            public void onSuccessResponse(@NonNull final Liveboard data, Object tag) {
                 // Compare the new one with the old one to check if stops have been added
                 if (data.getStops().length == mCurrentLiveboard.getStops().length) {
                     ErrorDialogFactory.showErrorDialog(new FileNotFoundException("No results"), getActivity(), false);
                     mLiveboardCardAdapter.disableInfinitePrevious();
-                }
+                }if (getActivity() != null)
+                getActivity().runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        LinearLayoutManager mgr = ((LinearLayoutManager) vRecyclerView.getLayoutManager());
+                        if (mgr.findFirstVisibleItemPosition() == 0) {
+                            int oldLength = mLiveboardCardAdapter.getItemCount();
 
-                int oldLength = mLiveboardCardAdapter.getItemCount();
+                            mCurrentLiveboard = data;
+                            showData(mCurrentLiveboard);
 
-                mCurrentLiveboard = data;
-                showData(mCurrentLiveboard);
+                            int newLength = mLiveboardCardAdapter.getItemCount();
+                            // Scroll past the load earlier item
+                            ((LinearLayoutManager) vRecyclerView.getLayoutManager()).scrollToPositionWithOffset(newLength - oldLength, 0);
 
-                int newLength = mLiveboardCardAdapter.getItemCount();
-                // Scroll past the load earlier item
-                ((LinearLayoutManager) vRecyclerView.getLayoutManager()).scrollToPositionWithOffset(newLength - oldLength, 0);
+                            mLiveboardCardAdapter.setPrevLoaded();
+                        }
+                    }
+                });
 
-                mLiveboardCardAdapter.setPrevLoaded();
             }
         }, new IRailErrorResponseListener() {
             @Override
-            public void onErrorResponse(@NonNull Exception e, Object tag) {
-                ErrorDialogFactory.showErrorDialog(e, LiveboardFragment.this.getActivity(), false);
-                mLiveboardCardAdapter.setPrevLoaded();
+            public void onErrorResponse(@NonNull final Exception e, Object tag) {if (getActivity() != null)
+                getActivity().runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        ErrorDialogFactory.showErrorDialog(e, LiveboardFragment.this.getActivity(), false);
+                        mLiveboardCardAdapter.setPrevLoaded();
+                    }
+                });
+
             }
         }, null);
         IrailFactory.getDataProviderInstance().extendLiveboard(request);
@@ -256,7 +293,7 @@ public class LiveboardFragment extends RecyclerViewFragment<Liveboard> implement
     }
 
     @Override
-    public void onRecyclerItemLongClick(RecyclerView.Adapter sender, VehicleStop object) {
+    public void onRecyclerItemLongClick(RecyclerView.Adapter sender, VehicleStop object) {if (getActivity() != null)
         (new VehiclePopupContextMenu(getActivity(), object)).show();
     }
 

@@ -155,24 +155,42 @@ public class VehicleFragment extends RecyclerViewFragment<Vehicle> implements In
         request.setCallback(new IRailSuccessResponseListener<Vehicle>() {
             @Override
             public void onSuccessResponse(@NonNull Vehicle data, Object tag) {
-                vRefreshLayout.setRefreshing(false);
+
                 mCurrentTrain = data;
-                showData(mCurrentTrain);
+                if (getActivity() != null) {
+                    getActivity().runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            vRefreshLayout.setRefreshing(false);
+                            showData(mCurrentTrain);
+                        }
+                    });
+                }
+
             }
         }, new IRailErrorResponseListener() {
             @Override
-            public void onErrorResponse(@NonNull Exception e, Object tag) {
-                vRefreshLayout.setRefreshing(false);
+            public void onErrorResponse(@NonNull final Exception e, Object tag) {
+                if (getActivity() != null) {
+                    getActivity().runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            vRefreshLayout.setRefreshing(false);
+                            // only finish if we're loading new data
+                            ErrorDialogFactory.showErrorDialog(e, getActivity(), mCurrentTrain == null);
+                        }
+                    });
+                }
 
-                // only finish if we're loading new data
-                ErrorDialogFactory.showErrorDialog(e, getActivity(), mCurrentTrain == null);
             }
         }, null);
         IrailFactory.getDataProviderInstance().getVehicle(request);
     }
 
     protected void showData(Vehicle train) {
-        getActivity().setTitle(train.getName() + " " + train.getHeadsign());
+        if (getActivity() != null) {
+            getActivity().setTitle(train.getName() + " " + train.getHeadsign());
+        }
 
         mRecyclerviewAdapter.updateTrain(train);
         mRequest.setOrigin(train.getStops()[0].getStation());
@@ -224,7 +242,9 @@ public class VehicleFragment extends RecyclerViewFragment<Vehicle> implements In
 
     @Override
     public void onRecyclerItemLongClick(RecyclerView.Adapter sender, VehicleStop stop) {
-        (new VehiclePopupContextMenu(getActivity(), stop)).show();
+        if (getActivity() != null) {
+            (new VehiclePopupContextMenu(getActivity(), stop)).show();
+        }
     }
 
     @Override

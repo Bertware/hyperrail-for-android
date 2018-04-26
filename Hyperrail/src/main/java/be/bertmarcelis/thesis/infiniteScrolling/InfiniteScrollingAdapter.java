@@ -12,6 +12,7 @@
 
 package be.bertmarcelis.thesis.infiniteScrolling;
 
+import android.app.Activity;
 import android.content.Context;
 import android.graphics.PorterDuff;
 import android.support.v4.content.ContextCompat;
@@ -50,7 +51,7 @@ public abstract class InfiniteScrollingAdapter<T> extends RecyclerView.Adapter<R
 
     private boolean mIsLoadingNext;
     private boolean mIsLoadingPrevious;
-    private final Context context;
+    private final Activity context;
     private final LinearLayoutManager mRecyclerViewLayoutMgr;
     private boolean mInfiniteNextScrolling = true;
     private boolean mInfinitePrevScrolling = true;
@@ -65,7 +66,7 @@ public abstract class InfiniteScrollingAdapter<T> extends RecyclerView.Adapter<R
      * @param recyclerView                The recyclerview in which this adapter will be used
      * @param infiniteScrollingDataSource The listener which should be notified when new data should be loaded
      */
-    protected InfiniteScrollingAdapter(Context context, RecyclerView recyclerView, InfiniteScrollingDataSource infiniteScrollingDataSource) {
+    protected InfiniteScrollingAdapter(Activity context, RecyclerView recyclerView, InfiniteScrollingDataSource infiniteScrollingDataSource) {
 
         this.context = context;
         this.mRecyclerView = recyclerView;
@@ -93,7 +94,7 @@ public abstract class InfiniteScrollingAdapter<T> extends RecyclerView.Adapter<R
                 && !mLoadNextError // Only when "tap to retry" isn't enabled
                 && mInfiniteScrollingDataSource != null // Only when we have a data source linked
                 && dy >= 0 // Only when scrolling downwards
-                && mRecyclerViewLayoutMgr.findLastVisibleItemPosition() == InfiniteScrollingAdapter.this.getItemCount() - 1 // Only when the last item is visible
+                && mRecyclerViewLayoutMgr.findLastVisibleItemPosition() >= InfiniteScrollingAdapter.this.getItemCount() - 2  // Only when the last item is visible
                 ) {
             // Load more ...
             mIsLoadingNext = true;
@@ -109,7 +110,12 @@ public abstract class InfiniteScrollingAdapter<T> extends RecyclerView.Adapter<R
     public void setInfiniteScrolling(boolean enabled) {
         this.mInfiniteNextScrolling = enabled;
         this.mInfinitePrevScrolling = enabled;
-        notifyDataSetChanged();
+        context.runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                notifyDataSetChanged();
+            }
+        });
     }
 
     @Override
@@ -261,7 +267,12 @@ public abstract class InfiniteScrollingAdapter<T> extends RecyclerView.Adapter<R
 
     public void setNextError(boolean hasError) {
         mLoadNextError = hasError;
-        notifyDataSetChanged();
+        context.runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                notifyDataSetChanged();
+            }
+        });
     }
 
     public void setPrevLoaded() {
@@ -270,12 +281,22 @@ public abstract class InfiniteScrollingAdapter<T> extends RecyclerView.Adapter<R
 
     public void disableInfinitePrevious() {
         mInfinitePrevScrolling = false;
-        notifyDataSetChanged();
+        context.runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                notifyDataSetChanged();
+            }
+        });
     }
 
     public void disableInfiniteNext() {
         mInfiniteNextScrolling = false;
-        notifyDataSetChanged();
+        context.runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                notifyDataSetChanged();
+            }
+        });
     }
 
     /**

@@ -1,6 +1,8 @@
 package be.bertmarcelis.thesis.irail.implementation;
 
 import android.content.Context;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.os.AsyncTask;
 import android.support.annotation.NonNull;
 
@@ -47,6 +49,7 @@ public class LinkedConnectionsApi implements IrailDataProvider, MeteredApi {
 
     private final IrailStationProvider mStationsProvider;
     private final LinkedConnectionsProvider mLinkedConnectionsProvider;
+    private final ConnectivityManager mConnectivityManager;
     private Context mContext;
     private static final String LOGTAG = "LinkedConnectionsApi";
     List<MeteredRequest> mMeteredRequests = new ArrayList<>();
@@ -55,6 +58,9 @@ public class LinkedConnectionsApi implements IrailDataProvider, MeteredApi {
         this.mContext = context;
         this.mStationsProvider = IrailFactory.getStationsProviderInstance();
         this.mLinkedConnectionsProvider = new LinkedConnectionsProvider(context);
+        mConnectivityManager =
+                (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
+        new PreloadPagesTask(this).execute();
     }
 
 
@@ -113,33 +119,8 @@ public class LinkedConnectionsApi implements IrailDataProvider, MeteredApi {
         }
     }
 
-    private void getRoutes(@NonNull IrailRoutesRequest request) {
-        MeteredRequest meteredRequest = new MeteredRequest();
-        meteredRequest.setTag(request.toString());
-        meteredRequest.setMsecStart(DateTime.now().getMillis());
-        mMeteredRequests.add(meteredRequest);
-
-        DateTime departureLimit;
-
-        if (request.getTimeDefinition() == RouteTimeDefinition.DEPART_AT) {
-            departureLimit = request.getSearchTime();
-        } else {
-            departureLimit = request.getSearchTime().minusHours(24);
-        }
-
-        RouteResponseListener listener = new RouteResponseListener(mLinkedConnectionsProvider, mStationsProvider, request, departureLimit);
-
-        if (request.getTimeDefinition() == RouteTimeDefinition.DEPART_AT) {
-            DateTime end = request.getSearchTime();
-            if (end.getHourOfDay() < 18 && end.getHourOfDay() >= 6) {
-                end = request.getSearchTime().plusHours(4);
-            } else {
-                end = request.getSearchTime().plusHours(6);
-            }
-            mLinkedConnectionsProvider.getLinkedConnectionsByDateForTimeSpan(request.getSearchTime(), end, listener, listener, meteredRequest);
-        } else {
-            mLinkedConnectionsProvider.getLinkedConnectionsByDateForTimeSpan(request.getSearchTime().minusHours(1), request.getSearchTime(), listener, listener, meteredRequest);
-        }
+    private void getRoutes(@NonNull final IrailRoutesRequest request) {
+        new StartRouteRequestTask(this).execute(request);
     }
 
     @Override
@@ -243,6 +224,13 @@ public class LinkedConnectionsApi implements IrailDataProvider, MeteredApi {
         return mMeteredRequests.toArray(meteredRequests);
     }
 
+    private boolean isInternetAvailable() {
+        NetworkInfo activeNetwork = mConnectivityManager.getActiveNetworkInfo();
+        return activeNetwork != null &&
+                activeNetwork.isConnectedOrConnecting();
+    }
+
+
     static class StartVehicleRequestTask extends AsyncTask<IrailVehicleRequest, Void, Void> {
 
         private final WeakReference<LinkedConnectionsApi> mApi;
@@ -320,5 +308,88 @@ public class LinkedConnectionsApi implements IrailDataProvider, MeteredApi {
         }
     }
 
+    static class StartRouteRequestTask extends AsyncTask<IrailRoutesRequest, Void, Void> {
+
+        private final WeakReference<LinkedConnectionsApi> mApi;
+
+        StartRouteRequestTask(LinkedConnectionsApi api) {
+            mApi = new WeakReference<>(api);
+        }
+
+        @Override
+        protected Void doInBackground(IrailRoutesRequest... requests) {
+
+            if (mApi.get() == null) {
+                return null;
+            }
+            final LinkedConnectionsApi api = mApi.get();
+            final IrailRoutesRequest request = requests[0];
+            final MeteredRequest meteredRequest = new MeteredRequest();
+            meteredRequest.setTag(request.toString());
+            meteredRequest.setMsecStart(DateTime.now().getMillis());
+            api.mMeteredRequests.add(meteredRequest);
+
+            DateTime departureLimit;
+
+            if (request.getTimeDefinition() == RouteTimeDefinition.DEPART_AT) {
+                departureLimit = request.getSearchTime();
+            } else {
+                departureLimit = request.getSearchTime().minusHours(24);
+            }
+
+            final RouteResponseListener listener = new RouteResponseListener(api.mLinkedConnectionsProvider, api.mStationsProvider, request, departureLimit);
+
+            if (request.getTimeDefinition() == RouteTimeDefinition.DEPART_AT) {
+                DateTime end = request.getSearchTime();
+                if (end.getHourOfDay() < 18 && end.getHourOfDay() >= 6) {
+                    end = request.getSearchTime().plusHours(2);
+                } else {
+                    end = request.getSearchTime().plusHours(4);
+                }
+
+                api.mLinkedConnectionsProvider.getLinkedConnectionsByDateForTimeSpan(request.getSearchTime(), end, listener, new IRailErrorResponseListener() {
+                    @Override
+                    public void onErrorResponse(@NonNull Exception e, Object tag) {
+                        DateTime newEnd = request.getSearchTime().plusHours(1);
+                        api.mLinkedConnectionsProvider.getLinkedConnectionsByDateForTimeSpan(request.getSearchTime(), newEnd, listener, new IRailErrorResponseListener() {
+                            @Override
+                            public void onErrorResponse(@NonNull Exception e, Object tag) {
+                                DateTime newEnd = request.getSearchTime().plusHours(8);
+                                api.mLinkedConnectionsProvider.getLinkedConnectionsByDateForTimeSpan(request.getSearchTime(), newEnd, listener, listener, meteredRequest);
+                            }
+                        }, meteredRequest);
+                    }
+                }, meteredRequest);
+            } else {
+                api.mLinkedConnectionsProvider.getLinkedConnectionsByDateForTimeSpan(request.getSearchTime().minusHours(1), request.getSearchTime(), listener, listener, meteredRequest);
+            }
+            return null;
+        }
+    }
+
+    static class PreloadPagesTask extends AsyncTask<Void, Void, Void> {
+
+        private final WeakReference<LinkedConnectionsApi> mApi;
+
+        PreloadPagesTask(LinkedConnectionsApi api) {
+            mApi = new WeakReference<>(api);
+        }
+
+        @Override
+        protected Void doInBackground(Void... requests) {
+
+            if (mApi.get() == null) {
+                return null;
+            }
+            LinkedConnectionsApi api = mApi.get();
+            MeteredRequest meteredRequest = new MeteredRequest();
+            meteredRequest.setTag("Pre-load 60");
+            meteredRequest.setMsecStart(DateTime.now().getMillis());
+            api.mMeteredRequests.add(meteredRequest);
+
+            api.mLinkedConnectionsProvider.getLinkedConnectionsByDateForTimeSpan(DateTime.now(), DateTime.now().plusMinutes(60), null, null, meteredRequest);
+            return null;
+        }
+    }
 
 }

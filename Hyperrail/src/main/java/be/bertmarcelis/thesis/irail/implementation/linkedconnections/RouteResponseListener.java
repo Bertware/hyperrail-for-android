@@ -157,8 +157,6 @@ public class RouteResponseListener implements IRailSuccessResponseListener<Linke
                     T3_transferArrivalTime = new DateTime(quadruple.arrivalTime.getMillis() + 240 * 1000);
                     // Using this transfer will increase the number of transfers with 1
                     T3_transfers = quadruple.transfers + 1;
-                    // Duration transferTime = new Duration(connection.arrivalTime, quadruple.departureTime);
-                    // Log::info("[{$connection->getId()}] Transferring possible with arrival time $T3_transferArrivalTime and $T3_transfers transfers. Transfer time is $transferTime.");
                 } else {
                     // When there isn't a reachable connection, transferring isn't an option
                     T3_transferArrivalTime = infinite;

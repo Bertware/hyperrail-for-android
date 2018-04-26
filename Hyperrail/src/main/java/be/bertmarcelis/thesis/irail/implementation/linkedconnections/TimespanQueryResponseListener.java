@@ -1,5 +1,7 @@
 package be.bertmarcelis.thesis.irail.implementation.linkedconnections;
 
+import android.support.annotation.Nullable;
+
 import org.joda.time.DateTime;
 
 import java.util.ArrayList;
@@ -21,7 +23,7 @@ public class TimespanQueryResponseListener implements QueryResponseListener.Link
     private List<LinkedConnection> result = new ArrayList<>();
     private String previous, current;
 
-    TimespanQueryResponseListener(final DateTime endTime, final IRailSuccessResponseListener<LinkedConnections> successListener, final IRailErrorResponseListener errorListener, Object tag) {
+    TimespanQueryResponseListener(final DateTime endTime, @Nullable final IRailSuccessResponseListener<LinkedConnections> successListener, @Nullable final IRailErrorResponseListener errorListener, @Nullable Object tag) {
         mEndTime = endTime;
         mSuccessListener = successListener;
         mErrorListener = errorListener;
@@ -47,13 +49,17 @@ public class TimespanQueryResponseListener implements QueryResponseListener.Link
             resultObject.current = current;
             resultObject.previous = previous;
             resultObject.next = data.next;
-            mSuccessListener.onSuccessResponse(resultObject, mTag);
+            if (mSuccessListener != null) {
+                mSuccessListener.onSuccessResponse(resultObject, mTag);
+            }
             return 0;
         }
     }
 
     @Override
     public void onQueryFailed(Exception e, Object tag) {
-        mErrorListener.onErrorResponse(e, tag);
+        if (mErrorListener != null) {
+            mErrorListener.onErrorResponse(e, tag);
+        }
     }
 }

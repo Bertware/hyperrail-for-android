@@ -117,9 +117,6 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         final Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
 
-        // TESTING PURPOSES
-        IrailFactory.setup(this);
-
         setTitle(R.string.app_name);
         mDualPane = (findViewById(R.id.drawer) == null);
 
@@ -201,6 +198,10 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
     @Override
     protected void onStart() {
         super.onStart();
+
+        // TESTING PURPOSES
+        IrailFactory.setup(this);
+
     }
 
     /**

@@ -81,8 +81,8 @@ public class Lc2IrailApi implements IrailDataProvider, MeteredApi {
         requestQueue.start();
 
         this.requestPolicy = new DefaultRetryPolicy(
-                1000,
-                2,
+                5000,
+                1,
                 DefaultRetryPolicy.DEFAULT_BACKOFF_MULT
         );
         mConnectivityManager =
@@ -377,15 +377,10 @@ public class Lc2IrailApi implements IrailDataProvider, MeteredApi {
                 return headers;
             }
         };
-        if (!url.contains("vehicle")) {
-            jsObjRequest.setRetryPolicy(requestPolicy);
-        } else {
-            jsObjRequest.setRetryPolicy(new DefaultRetryPolicy(
-                    5000,
-                    1,
-                    DefaultRetryPolicy.DEFAULT_BACKOFF_MULT
-            ));
-        }
+
+
+        jsObjRequest.setRetryPolicy(requestPolicy);
+
 
         jsObjRequest.setTag(TAG_IRAIL_API_GET);
 
@@ -404,6 +399,7 @@ public class Lc2IrailApi implements IrailDataProvider, MeteredApi {
             }
             requestQueue.add(jsObjRequest);
         } else {
+            Log.d(LOGTAG,"Trying to get data without internet");
             if (requestQueue.getCache().get(jsObjRequest.getCacheKey()) != null) {
                 try {
                     JSONObject cache;
@@ -418,6 +414,7 @@ public class Lc2IrailApi implements IrailDataProvider, MeteredApi {
                 }
 
             } else {
+                Log.d(LOGTAG,"No cache available");
                 errorListener.onErrorResponse(new NoConnectionError());
                 meteredRequest.setResponseType(RESPONSE_FAILED);
             }

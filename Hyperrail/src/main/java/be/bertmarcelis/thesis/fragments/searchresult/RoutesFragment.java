@@ -140,18 +140,32 @@ public class RoutesFragment extends RecyclerViewFragment<RouteResult> implements
                                 public void onSuccessResponse(@NonNull RouteResult data, Object tag) {
                                     vRefreshLayout.setRefreshing(false);
                                     mCurrentRouteResult = data;
-                                    showData(mCurrentRouteResult);
 
-                                    // Scroll past the load earlier item
-                                    ((LinearLayoutManager) vRecyclerView.getLayoutManager()).scrollToPositionWithOffset(
-                                            1, 0);
+                                    final LinearLayoutManager mgr = ((LinearLayoutManager) vRecyclerView.getLayoutManager());
+                                    if (getActivity() != null) {
+                                        getActivity().runOnUiThread(new Runnable() {
+                                            @Override
+                                            public void run() {
+                                                showData(mCurrentRouteResult);
+                                                // Scroll past the load earlier item
+                                                mgr.scrollToPositionWithOffset(1, 0);
+                                            }
+                                        });
+                                    }
                                 }
                             }, new IRailErrorResponseListener() {
                                 @Override
-                                public void onErrorResponse(@NonNull Exception e, Object tag) {
-                                    // only finish if we're loading new data
-                                    mRouteCardAdapter.setInfiniteScrolling(false);
-                                    ErrorDialogFactory.showErrorDialog(e, getActivity(), mCurrentRouteResult == null);
+                                public void onErrorResponse(@NonNull final Exception e, Object tag) {
+                                    if (getActivity() != null) {
+                                        getActivity().runOnUiThread(new Runnable() {
+                                            @Override
+                                            public void run() {
+                                                // only finish if we're loading new data
+                                                mRouteCardAdapter.setInfiniteScrolling(false);
+                                                ErrorDialogFactory.showErrorDialog(e, getActivity(), mCurrentRouteResult == null);
+                                            }
+                                        });
+                                    }
                                 }
                             },
                             null);
@@ -169,32 +183,49 @@ public class RoutesFragment extends RecyclerViewFragment<RouteResult> implements
         request.setCallback(
                 new IRailSuccessResponseListener<RouteResult>() {
                     @Override
-                    public void onSuccessResponse(@NonNull RouteResult data, Object tag) {
-                        // data consists of both old and new routes
+                    public void onSuccessResponse(@NonNull final RouteResult data, Object tag) {
 
-                        if (data.getRoutes().length == mCurrentRouteResult.getRoutes().length) {
-                            mRouteCardAdapter.disableInfiniteNext(); // Nothing new anymore
-                            // ErrorDialogFactory.showErrorDialog(new FileNotFoundException("No results"), RouteActivity.this,  (mSearchDate == null));
+                        if (getActivity() != null) {
+                            getActivity().runOnUiThread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    // data consists of both old and new routes
+
+                                    if (data.getRoutes().length == mCurrentRouteResult.getRoutes().length) {
+                                        mRouteCardAdapter.disableInfiniteNext(); // Nothing new anymore
+                                        // ErrorDialogFactory.showErrorDialog(new FileNotFoundException("No results"), RouteActivity.this,  (mSearchDate == null));
+                                    }
+
+                                    mCurrentRouteResult = data;
+
+                                    mRouteCardAdapter.setNextLoaded();
+
+                                    // Scroll past the "load earlier"
+                                    final LinearLayoutManager mgr = ((LinearLayoutManager) vRecyclerView.getLayoutManager());
+                                    // Scroll past the load earlier item
+                                    if (mgr.findFirstVisibleItemPosition() == 0) {
+                                        mgr.scrollToPositionWithOffset(1, 0);
+                                        showData(mCurrentRouteResult);
+                                    }
+                                }
+                            });
                         }
-
-                        mCurrentRouteResult = data;
-                        showData(mCurrentRouteResult);
-
-                        mRouteCardAdapter.setNextLoaded();
-
-                        // Scroll past the "load earlier"
-                        LinearLayoutManager mgr = ((LinearLayoutManager) vRecyclerView.getLayoutManager());
-                        if (mgr.findFirstVisibleItemPosition() == 0) {
-                            mgr.scrollToPositionWithOffset(1, 0);
-                        }
-
                     }
+
+
                 }, new IRailErrorResponseListener() {
                     @Override
-                    public void onErrorResponse(@NonNull Exception e, Object tag) {
-                        ErrorDialogFactory.showErrorDialog(e, getActivity(), false);
-                        mRouteCardAdapter.setNextError(true);
-                        mRouteCardAdapter.setNextLoaded();
+                    public void onErrorResponse(@NonNull final Exception e, Object tag) {
+                        if (getActivity() != null) {
+                            getActivity().runOnUiThread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    ErrorDialogFactory.showErrorDialog(e, getActivity(), false);
+                                    mRouteCardAdapter.setNextError(true);
+                                    mRouteCardAdapter.setNextLoaded();
+                                }
+                            });
+                        }
                     }
                 }, null);
         IrailFactory.getDataProviderInstance().extendRoutes(request);
@@ -210,30 +241,45 @@ public class RoutesFragment extends RecyclerViewFragment<RouteResult> implements
         request.setCallback(
                 new IRailSuccessResponseListener<RouteResult>() {
                     @Override
-                    public void onSuccessResponse(@NonNull RouteResult data, Object tag) {
-                        // data consists of both old and new routes
-                        if (data.getRoutes().length == mCurrentRouteResult.getRoutes().length) {
-                            // ErrorDialogFactory.showErrorDialog(new FileNotFoundException("No results"), RouteActivity.this,  (mSearchDate == null));
-                            mRouteCardAdapter.disableInfinitePrevious();
+                    public void onSuccessResponse(@NonNull final RouteResult data, Object tag) {
+                        if (getActivity() != null) {
+                            getActivity().runOnUiThread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    // only finish if we're loading new data
+                                    // data consists of both old and new routes
+                                    if (data.getRoutes().length == mCurrentRouteResult.getRoutes().length) {
+                                        // ErrorDialogFactory.showErrorDialog(new FileNotFoundException("No results"), RouteActivity.this,  (mSearchDate == null));
+                                        mRouteCardAdapter.disableInfinitePrevious();
+                                    }
+
+                                    int oldLength = mRouteCardAdapter.getItemCount();
+
+                                    mCurrentRouteResult = data;
+                                    showData(mCurrentRouteResult);
+
+                                    int newLength = mRouteCardAdapter.getItemCount();
+
+                                    // Scroll past the load earlier item
+                                    ((LinearLayoutManager) vRecyclerView.getLayoutManager()).scrollToPositionWithOffset(newLength - oldLength, 0);
+
+                                    mRouteCardAdapter.setPrevLoaded();
+                                }
+                            });
                         }
-
-                        int oldLength = mRouteCardAdapter.getItemCount();
-
-                        mCurrentRouteResult = data;
-                        showData(mCurrentRouteResult);
-
-                        int newLength = mRouteCardAdapter.getItemCount();
-
-                        // Scroll past the load earlier item
-                        ((LinearLayoutManager) vRecyclerView.getLayoutManager()).scrollToPositionWithOffset(newLength - oldLength, 0);
-
-                        mRouteCardAdapter.setPrevLoaded();
                     }
                 }, new IRailErrorResponseListener() {
                     @Override
-                    public void onErrorResponse(@NonNull Exception e, Object tag) {
-                        ErrorDialogFactory.showErrorDialog(e, getActivity(), false);
-                        mRouteCardAdapter.setPrevLoaded();
+                    public void onErrorResponse(@NonNull final Exception e, Object tag) {
+                        if (getActivity() != null) {
+                            getActivity().runOnUiThread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    ErrorDialogFactory.showErrorDialog(e, getActivity(), false);
+                                    mRouteCardAdapter.setPrevLoaded();
+                                }
+                            });
+                        }
                     }
                 }, null);
         IrailFactory.getDataProviderInstance().extendRoutes(request);

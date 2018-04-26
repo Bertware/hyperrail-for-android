@@ -43,7 +43,7 @@
     <string name="error_departure_not_found_title">Ongeldig vertrekstation</string>
     <string name="error_destination_not_found_title">Ongeldige bestemming</string>
     <string name="error_route_from_missing">Het vertrekstation mag niet leeg zijn</string>
-    <string name="error_route_to_missing">Het aankomststation mag niet leeg zijn</string>
+    <string name="error_route_tfo_missing">Het aankomststation mag niet leeg zijn</string>
 
     <string name="search_station_name">Zoek een station</string>
 
@@ -58,7 +58,7 @@
     <string name="action_swap">Wissel richting</string>
 
     <string name="time_at">om</string>
-    <string name="time_now">onmiddelijk</string>
+    <string name="time_now">onmiddellijk</string>
     <string name="time_today">vandaag</string>
     <string name="time_tomorrow">morgen</string>
 

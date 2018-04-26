@@ -12,6 +12,7 @@
 
 package be.bertmarcelis.thesis.adapter;
 
+import android.app.Activity;
 import android.content.Context;
 import android.preference.PreferenceManager;
 import android.support.v7.widget.RecyclerView;
@@ -20,6 +21,7 @@ import android.view.View;
 import android.view.ViewGroup;
 
 import org.joda.time.DateTime;
+import org.joda.time.DateTimeZone;
 
 import java.util.ArrayList;
 
@@ -48,7 +50,7 @@ public class LiveboardCardAdapter extends InfiniteScrollingAdapter<VehicleStop> 
 
     protected final static int VIEW_TYPE_DATE = 1;
 
-    public LiveboardCardAdapter(Context context, RecyclerView recyclerView, InfiniteScrollingDataSource listener) {
+    public LiveboardCardAdapter(Activity context, RecyclerView recyclerView, InfiniteScrollingDataSource listener) {
         super(context, recyclerView, listener);
         this.context = context;
     }
@@ -70,12 +72,12 @@ public class LiveboardCardAdapter extends InfiniteScrollingAdapter<VehicleStop> 
         }
 
         // Default day to compare to is today
-        DateTime dateCompareObj = DateTime.now().withTimeAtStartOfDay();
+        DateTime dateCompareObj = DateTime.now().withZone(DateTimeZone.UTC).withTimeAtStartOfDay();
         DateTime stoptime = liveBoard.getStops()[0].getType() == VehicleStopType.DEPARTURE ?
                 liveBoard.getStops()[0].getDepartureTime() :
                 liveboard.getStops()[0].getArrivalTime();
 
-        if (stoptime.withTimeAtStartOfDay().isBefore(dateCompareObj)) {
+        if (stoptime.withZone(DateTimeZone.UTC).withTimeAtStartOfDay().isBefore(dateCompareObj)) {
             // If the first stop is not today, add date separators everywhere
             dateCompareObj = stoptime.withTimeAtStartOfDay().minusDays(1);
         } else if (!liveboard.getSearchTime().withTimeAtStartOfDay().equals(stoptime.withTimeAtStartOfDay())) {
