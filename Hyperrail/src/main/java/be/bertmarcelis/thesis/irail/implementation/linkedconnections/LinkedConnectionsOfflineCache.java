@@ -74,7 +74,7 @@ public class LinkedConnectionsOfflineCache extends SQLiteOpenHelper {
 
     private CachedLinkedConnections loadApproximate(String url) {
         SQLiteDatabase db = getReadableDatabase();
-        Cursor c = db.query(TABLE, new String[]{"url", "data", "datetime"}, "url<=? AND next>=?", new String[]{url,url}, null, null, "url DESC");
+        Cursor c = db.query(TABLE, new String[]{"url", "data", "datetime"}, "url<=? AND next>?", new String[]{url,url}, null, null, "url DESC");
 
         if (c.getCount() == 0) {
             c.close();
