@@ -15,6 +15,9 @@ package be.bertmarcelis.thesis.irail.implementation;
 import org.joda.time.DateTime;
 
 import java.io.Serializable;
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.HashMap;
 
 import be.bertmarcelis.thesis.irail.contracts.PagedResource;
 import be.bertmarcelis.thesis.irail.contracts.PagedResourceDescriptor;
@@ -32,14 +35,14 @@ public class RouteResult implements Serializable, PagedResource {
     private final Station destination;
     private final RouteTimeDefinition timeDefinition;
     private final DateTime mLastSearchTime;
-    private Route[] routes;
+    private Route[] mRoutes;
     private PagedResourceDescriptor mDescriptor;
 
     public RouteResult(Station origin, Station destination, DateTime searchTime, RouteTimeDefinition timeDefinition, Route[] routes) {
         this.destination = destination;
         this.mLastSearchTime = searchTime;
         this.origin = origin;
-        this.routes = routes;
+        this.mRoutes = routes;
         this.timeDefinition = timeDefinition;
     }
 
@@ -60,7 +63,7 @@ public class RouteResult implements Serializable, PagedResource {
     }
 
     public Route[] getRoutes() {
-        return routes;
+        return mRoutes;
     }
 
     @Override
@@ -71,5 +74,41 @@ public class RouteResult implements Serializable, PagedResource {
     @Override
     public void setPageInfo(PagedResourceDescriptor descriptor) {
         mDescriptor = descriptor;
+    }
+
+    public RouteResult withRoutesAppended(RouteResult... other) {
+        HashMap<String, Route> routesByUri = new HashMap<>();
+        for (Route r :
+                mRoutes) {
+            routesByUri.put(getRouteId(r), r);
+        }
+
+        for (RouteResult results : other
+                ) {
+            for (Route r :
+                    results.getRoutes()) {
+                routesByUri.put(getRouteId(r), r);
+            }
+        }
+
+        Route[] routes = new Route[routesByUri.size()];
+        routes = routesByUri.values().toArray(routes);
+
+        Arrays.sort(routes, new Comparator<Route>() {
+            @Override
+            public int compare(Route o1, Route o2) {
+                return o1.getDepartureTime().compareTo(o2.getDepartureTime());
+            }
+        });
+
+        return new RouteResult(origin, destination, mLastSearchTime, timeDefinition, routes);
+    }
+
+    private static String getRouteId(Route route) {
+        StringBuilder id = new StringBuilder();
+        for (RouteLeg l : route.getLegs()) {
+            id.append(l.getDeparture().getUri());
+        }
+        return id.toString();
     }
 }

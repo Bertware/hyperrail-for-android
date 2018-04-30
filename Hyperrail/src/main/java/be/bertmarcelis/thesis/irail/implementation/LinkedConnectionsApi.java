@@ -26,6 +26,7 @@ import be.bertmarcelis.thesis.irail.implementation.irailapi.RouteAppendHelper;
 import be.bertmarcelis.thesis.irail.implementation.linkedconnections.LinkedConnectionsProvider;
 import be.bertmarcelis.thesis.irail.implementation.linkedconnections.LiveboardExtendHelper;
 import be.bertmarcelis.thesis.irail.implementation.linkedconnections.LiveboardResponseListener;
+import be.bertmarcelis.thesis.irail.implementation.linkedconnections.RouteExtendHelper;
 import be.bertmarcelis.thesis.irail.implementation.linkedconnections.RouteResponseListener;
 import be.bertmarcelis.thesis.irail.implementation.linkedconnections.VehicleQueryResponseListener;
 import be.bertmarcelis.thesis.irail.implementation.linkedconnections.VehicleResponseListener;
@@ -115,7 +116,13 @@ public class LinkedConnectionsApi implements IrailDataProvider, MeteredApi {
     public void extendRoutes(@NonNull ExtendRoutesRequest... requests) {
         for (ExtendRoutesRequest request :
                 requests) {
-            (new RouteAppendHelper()).extendRoutesRequest(request);
+            MeteredRequest meteredRequest = new MeteredRequest();
+            meteredRequest.setTag(request.toString());
+            meteredRequest.setMsecStart(DateTime.now().getMillis());
+            mMeteredRequests.add(meteredRequest);
+
+            RouteExtendHelper helper = new RouteExtendHelper(mLinkedConnectionsProvider, mStationsProvider, request, meteredRequest);
+            helper.extend();
         }
     }
 
@@ -322,6 +329,7 @@ public class LinkedConnectionsApi implements IrailDataProvider, MeteredApi {
             if (mApi.get() == null) {
                 return null;
             }
+
             final LinkedConnectionsApi api = mApi.get();
             final IrailRoutesRequest request = requests[0];
             final MeteredRequest meteredRequest = new MeteredRequest();
@@ -342,19 +350,19 @@ public class LinkedConnectionsApi implements IrailDataProvider, MeteredApi {
             if (request.getTimeDefinition() == RouteTimeDefinition.DEPART_AT) {
                 DateTime end = request.getSearchTime();
                 if (end.getHourOfDay() < 18 && end.getHourOfDay() >= 6) {
-                    end = request.getSearchTime().plusHours(2);
-                } else {
                     end = request.getSearchTime().plusHours(4);
+                } else {
+                    end = request.getSearchTime().plusHours(6);
                 }
 
                 api.mLinkedConnectionsProvider.getLinkedConnectionsByDateForTimeSpan(request.getSearchTime(), end, listener, new IRailErrorResponseListener() {
                     @Override
                     public void onErrorResponse(@NonNull Exception e, Object tag) {
-                        DateTime newEnd = request.getSearchTime().plusHours(1);
+                        DateTime newEnd = request.getSearchTime().plusHours(3);
                         api.mLinkedConnectionsProvider.getLinkedConnectionsByDateForTimeSpan(request.getSearchTime(), newEnd, listener, new IRailErrorResponseListener() {
                             @Override
                             public void onErrorResponse(@NonNull Exception e, Object tag) {
-                                DateTime newEnd = request.getSearchTime().plusHours(8);
+                                DateTime newEnd = request.getSearchTime().plusHours(2);
                                 api.mLinkedConnectionsProvider.getLinkedConnectionsByDateForTimeSpan(request.getSearchTime(), newEnd, listener, listener, meteredRequest);
                             }
                         }, meteredRequest);

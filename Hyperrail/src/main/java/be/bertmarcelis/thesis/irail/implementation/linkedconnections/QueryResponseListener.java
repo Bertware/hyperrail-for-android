@@ -21,10 +21,10 @@ public class QueryResponseListener implements IRailErrorResponseListener, IRailS
     public void onSuccessResponse(@NonNull LinkedConnections data, Object tag) {
         int status = mQueryFunction.onQueryResult(data);
         if (status < 0) {
-            mProvider.getLinkedConnectionByUrl(data.previous, this, this, tag);
+            mProvider.getLinkedConnectionsByUrl(data.previous, this, this, tag);
         }
         if (status > 0) {
-            mProvider.getLinkedConnectionByUrl(data.next, this, this, tag);
+            mProvider.getLinkedConnectionsByUrl(data.next, this, this, tag);
         }
     }
 

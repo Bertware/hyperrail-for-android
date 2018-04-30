@@ -321,7 +321,7 @@ public class Lc2IrailParser {
     @NonNull
     public RouteResult parseRoutes(@NonNull IrailRoutesRequest request, @NonNull JSONObject json) throws JSONException, StationNotResolvedException {
         Station origin = stationProvider.getStationByUri(json.getJSONObject("departureStation").getString("uri"));
-        Station destination = stationProvider.getStationByUri(json.getJSONObject("destination").getString("uri"));
+        Station destination = stationProvider.getStationByUri(json.getJSONObject("arrivalStation").getString("uri"));
 
         JSONArray connections = json.getJSONArray("connections");
         Route[] routes = new Route[connections.length()];

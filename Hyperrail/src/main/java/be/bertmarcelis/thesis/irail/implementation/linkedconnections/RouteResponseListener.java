@@ -1,6 +1,7 @@
 package be.bertmarcelis.thesis.irail.implementation.linkedconnections;
 
 import android.support.annotation.NonNull;
+import android.util.Log;
 
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
@@ -17,6 +18,7 @@ import be.bertmarcelis.thesis.irail.contracts.IRailSuccessResponseListener;
 import be.bertmarcelis.thesis.irail.contracts.IrailStationProvider;
 import be.bertmarcelis.thesis.irail.contracts.MeteredApi;
 import be.bertmarcelis.thesis.irail.contracts.OccupancyLevel;
+import be.bertmarcelis.thesis.irail.contracts.PagedResourceDescriptor;
 import be.bertmarcelis.thesis.irail.contracts.StationNotResolvedException;
 import be.bertmarcelis.thesis.irail.implementation.Route;
 import be.bertmarcelis.thesis.irail.implementation.RouteLeg;
@@ -55,6 +57,9 @@ public class RouteResponseListener implements IRailSuccessResponseListener<Linke
     // Size m, where m is the number of trips
     HashMap<String, TrainTriple> T = new HashMap<>();
     private Object mTag;
+    private String mNext;
+    private String mPrevious;
+    private String mCurrent;
 
     public RouteResponseListener(LinkedConnectionsProvider linkedConnectionsProvider, IrailStationProvider stationProvider, IrailRoutesRequest request, DateTime departureLimit) {
         mLinkedConnectionsProvider = linkedConnectionsProvider;
@@ -70,8 +75,14 @@ public class RouteResponseListener implements IRailSuccessResponseListener<Linke
         // - but stop when we're passing the departe time limit
         // - when we're searching with a departuretime, we need to continue until we're at the front. This might result in more results, which we'll all pass to the client
 
+        mPrevious = data.previous;
+        mCurrent = data.current;
+        if (mNext == null){
+            mNext = data.next;
+        }
+
         if (data.connections.length == 0) {
-            mLinkedConnectionsProvider.getLinkedConnectionByUrl(data.previous, this, this, null);
+            mLinkedConnectionsProvider.getLinkedConnectionsByUrl(data.previous, this, this, null);
         }
 
         boolean hasPassedDepartureLimit = false;
@@ -341,10 +352,12 @@ public class RouteResponseListener implements IRailSuccessResponseListener<Linke
         if (!S.containsKey(mRoutesRequest.getOrigin().getUri())) {
             if (hasPassedDepartureLimit) {
                 RouteResult result = new RouteResult(mRoutesRequest.getOrigin(), mRoutesRequest.getDestination(), mRoutesRequest.getSearchTime(), mRoutesRequest.getTimeDefinition(), new Route[0]);
+                result.setPageInfo(new PagedResourceDescriptor(mPrevious,mCurrent,mNext));
                 ((MeteredApi.MeteredRequest) mTag).setMsecParsed(DateTime.now().getMillis());
+                Log.d("RouteResponseListener","Found 0 results");
                 mRoutesRequest.notifySuccessListeners(result);
             } else {
-                mLinkedConnectionsProvider.getLinkedConnectionByUrl(data.previous, this, this, mTag);
+                mLinkedConnectionsProvider.getLinkedConnectionsByUrl(data.previous, this, this, mTag);
             }
             return;
         }
@@ -394,7 +407,9 @@ public class RouteResponseListener implements IRailSuccessResponseListener<Linke
         });
 
         RouteResult result = new RouteResult(mRoutesRequest.getOrigin(), mRoutesRequest.getDestination(), mRoutesRequest.getSearchTime(), mRoutesRequest.getTimeDefinition(), routes);
+        result.setPageInfo(new PagedResourceDescriptor(mPrevious,mCurrent,mNext));
         ((MeteredApi.MeteredRequest) mTag).setMsecParsed(DateTime.now().getMillis());
+        Log.d("RouteResponseListener","Found " +  result.getRoutes().length + " results");
         mRoutesRequest.notifySuccessListeners(result);
     }
 

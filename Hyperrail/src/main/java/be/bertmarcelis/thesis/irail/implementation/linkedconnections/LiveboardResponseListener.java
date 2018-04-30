@@ -96,15 +96,15 @@ public class LiveboardResponseListener implements IRailSuccessResponseListener<L
             if (request.getTimeDefinition() == RouteTimeDefinition.ARRIVE_AT) {
                 link = data.previous;
             }
-            mLinkedConnectionsProvider.getLinkedConnectionByUrl(link,
-                                                                this,
-                                                                new IRailErrorResponseListener() {
+            mLinkedConnectionsProvider.getLinkedConnectionsByUrl(link,
+                                                                 this,
+                                                                 new IRailErrorResponseListener() {
                                                                     @Override
                                                                     public void onErrorResponse(@NonNull Exception e, Object tag) {
                                                                         Log.w("LiveboardResponseLstnr", "Getting next LC page failed");
                                                                     }
                                                                 },
-                                                                tag);
+                                                                 tag);
         }
 
     }

@@ -17,7 +17,6 @@ import com.android.volley.toolbox.BasicNetwork;
 import com.android.volley.toolbox.DiskBasedCache;
 import com.android.volley.toolbox.HurlStack;
 import com.android.volley.toolbox.JsonObjectRequest;
-import com.android.volley.toolbox.Volley;
 
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
@@ -89,10 +88,15 @@ public class LinkedConnectionsProvider {
         startTime = startTime.withSecondOfMinute(0);
         startTime = startTime.minusMinutes(startTime.getMinuteOfHour() % 10);
 
-        String url = "https://graph.irail.be/sncb/connections?departureTime=" +
-                startTime.withZone(DateTimeZone.UTC).toString(ISODateTimeFormat.dateTime());
+        String url = getLinkedConnectionsUrl(startTime);
 
-        getLinkedConnectionByUrl(url, successListener, errorListener, tag);
+        getLinkedConnectionsByUrl(url, successListener, errorListener, tag);
+    }
+
+    @NonNull
+    public String getLinkedConnectionsUrl(DateTime timestamp) {
+        return "https://graph.irail.be/sncb/connections?departureTime=" +
+                timestamp.withZone(DateTimeZone.UTC).toString(ISODateTimeFormat.dateTime());
     }
 
     public void queryLinkedConnections(DateTime startTime, final QueryResponseListener.LinkedConnectionsQuery query, Object tag) {
@@ -100,22 +104,35 @@ public class LinkedConnectionsProvider {
         getLinkedConnectionsByDate(startTime, responseListener, responseListener, tag);
     }
 
+    public void queryLinkedConnections(String startUrl, final QueryResponseListener.LinkedConnectionsQuery query, Object tag) {
+        QueryResponseListener responseListener = new QueryResponseListener(this, query);
+        getLinkedConnectionsByUrl(startUrl, responseListener, responseListener, tag);
+    }
+
     public void getLinkedConnectionsByDateForTimeSpan(DateTime startTime, final DateTime endTime, final IRailSuccessResponseListener<LinkedConnections> successListener, final IRailErrorResponseListener errorListener, Object tag) {
         TimespanQueryResponseListener listener = new TimespanQueryResponseListener(endTime, successListener, errorListener, tag);
         queryLinkedConnections(startTime, listener, tag);
     }
 
+    public void getLinkedConnectionsByUrlSpan(String start, final String end, final IRailSuccessResponseListener<LinkedConnections> successListener, final IRailErrorResponseListener errorListener, Object tag) {
+        UrlSpanQueryResponseListener listener = new UrlSpanQueryResponseListener(end, successListener, errorListener, tag);
+        queryLinkedConnections(start, listener, tag);
+    }
 
-    public void getLinkedConnectionByUrl(final String url, final IRailSuccessResponseListener<LinkedConnections> successListener, final IRailErrorResponseListener errorListener, final Object tag) {
+
+    public void getLinkedConnectionsByUrl(final String url, final IRailSuccessResponseListener<LinkedConnections> successListener, final IRailErrorResponseListener errorListener, final Object tag) {
         // https://graph.irail.be/sncb/connections?departureTime={ISO8601}
-        // Log.i(LOGTAG, "Loading " + url);
+        if (BuildConfig.DEBUG) {
+            Log.i("LCProvider", "Loading " + url);
+        }
         // TODO: prevent loading the same URL twice when two requests are made short after each other (locking based on URL)
-
 
         Response.Listener<JSONObject> volleySuccessListener = new Response.Listener<JSONObject>() {
             @Override
             public void onResponse(JSONObject response) {
-                Log.w("LCProvider", "Getting LC page successful: " + url);
+                if (BuildConfig.DEBUG) {
+                    Log.w("LCProvider", "Getting LC page successful: " + url);
+                }
                 try {
                     LinkedConnections result = getLinkedConnectionsFromJson(response);
                     mLinkedConnectionsOfflineCache.store(url, response.toString());
@@ -131,14 +148,20 @@ public class LinkedConnectionsProvider {
         Response.ErrorListener volleyErrorListener = new Response.ErrorListener() {
             @Override
             public void onErrorResponse(VolleyError error) {
-                Log.w("LCProvider", "Getting LC page " + url + " failed: " + error.getMessage());
+                if (BuildConfig.DEBUG) {
+                    Log.w("LCProvider", "Getting LC page " + url + " failed: " + error.getMessage());
+                }
                 LinkedConnectionsOfflineCache.CachedLinkedConnections cache = mLinkedConnectionsOfflineCache.load(url);
                 if (cache == null) {
-                    Log.w("LCProvider", "Getting LC page " + url + " failed: offline cache missed!");
+                    if (BuildConfig.DEBUG) {
+                        Log.w("LCProvider", "Getting LC page " + url + " failed: offline cache missed!");
+                    }
                     errorListener.onErrorResponse(error, tag);
                 } else {
                     try {
-                        Log.w("LCProvider", "Getting LC page " + url + " failed: offline cache hit!");
+                        if (BuildConfig.DEBUG) {
+                            Log.w("LCProvider", "Getting LC page " + url + " failed: offline cache hit!");
+                        }
                         LinkedConnections result = getLinkedConnectionsFromJson(new JSONObject(cache.data));
                         successListener.onSuccessResponse(result, tag);
                     } catch (JSONException e) {
@@ -163,8 +186,10 @@ public class LinkedConnectionsProvider {
         LinkedConnectionsOfflineCache.CachedLinkedConnections cache = mLinkedConnectionsOfflineCache.load(url);
         if (cache != null && cache.createdAt.isAfter(DateTime.now().minusSeconds(60))) {
             try {
-                ((MeteredApi.MeteredRequest)tag).setResponseType(RESPONSE_CACHED);
-                Log.w("LCProvider", "Fulfilled without network");
+                ((MeteredApi.MeteredRequest) tag).setResponseType(RESPONSE_CACHED);
+                if (BuildConfig.DEBUG) {
+                    Log.w("LCProvider", "Fulfilled without network");
+                }
                 volleySuccessListener.onResponse(new JSONObject(cache.data));
                 return;
             } catch (JSONException e) {
@@ -172,20 +197,24 @@ public class LinkedConnectionsProvider {
             }
         } else {
             if (cache == null) {
-                Log.w("LCProvider", "Not in cache");
+                if (BuildConfig.DEBUG) {
+                    Log.w("LCProvider", "Not in cache");
+                }
             } else {
-                Log.w("LCProvider", "Cache is " + (new Duration(cache.createdAt, DateTime.now()).getStandardSeconds()) + "sec old, getting new");
+                if (BuildConfig.DEBUG) {
+                    Log.w("LCProvider", "Cache is " + (new Duration(cache.createdAt, DateTime.now()).getStandardSeconds()) + "sec old, getting new");
+                }
             }
         }
 
-       if (isInternetAvailable()) {
-           ((MeteredApi.MeteredRequest)tag).setResponseType(RESPONSE_ONLINE);
+        if (isInternetAvailable()) {
+            ((MeteredApi.MeteredRequest) tag).setResponseType(RESPONSE_ONLINE);
             jsObjRequest.setShouldCache(mCacheEnabled);
             jsObjRequest.setRetryPolicy(requestPolicy);
             //Log.i(LOGTAG, "Cached? " + url + ": " + (requestQueue.getCache().get(url) == null ? "empty" : (requestQueue.getCache().get(url).isExpired() ? "expired" : "valid")));
             requestQueue.add(jsObjRequest);
         } else {
-           ((MeteredApi.MeteredRequest)tag).setResponseType(RESPONSE_OFFLINE);
+            ((MeteredApi.MeteredRequest) tag).setResponseType(RESPONSE_OFFLINE);
             volleyErrorListener.onErrorResponse(new NoConnectionError());
         }
     }

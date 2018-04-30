@@ -294,7 +294,12 @@ public abstract class InfiniteScrollingAdapter<T> extends RecyclerView.Adapter<R
         context.runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                notifyDataSetChanged();
+                mRecyclerView.post(new Runnable() {
+                    @Override
+                    public void run() {
+                        notifyDataSetChanged();
+                    }
+                });
             }
         });
     }

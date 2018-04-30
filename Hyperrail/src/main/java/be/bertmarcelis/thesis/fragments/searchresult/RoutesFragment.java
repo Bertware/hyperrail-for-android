@@ -205,8 +205,8 @@ public class RoutesFragment extends RecyclerViewFragment<RouteResult> implements
                                     // Scroll past the load earlier item
                                     if (mgr.findFirstVisibleItemPosition() == 0) {
                                         mgr.scrollToPositionWithOffset(1, 0);
-                                        showData(mCurrentRouteResult);
                                     }
+                                    showData(mCurrentRouteResult);
                                 }
                             });
                         }

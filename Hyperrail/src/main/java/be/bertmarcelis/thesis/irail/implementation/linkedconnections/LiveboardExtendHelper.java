@@ -51,10 +51,10 @@ public class LiveboardExtendHelper implements IRailSuccessResponseListener<Liveb
         liveboardRequest.setCallback(this, this, mMeteredRequest);
         LiveboardResponseListener listener = new LiveboardResponseListener(mLinkedConnectionsProvider, mStationProvider, liveboardRequest);
 
-        mLinkedConnectionsProvider.getLinkedConnectionByUrl(url,
-                                                            listener,
-                                                            listener,
-                                                            mMeteredRequest);
+        mLinkedConnectionsProvider.getLinkedConnectionsByUrl(url,
+                                                             listener,
+                                                             listener,
+                                                             mMeteredRequest);
 
     }
 
