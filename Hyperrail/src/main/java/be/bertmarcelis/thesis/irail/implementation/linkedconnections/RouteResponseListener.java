@@ -1,6 +1,7 @@
 package be.bertmarcelis.thesis.irail.implementation.linkedconnections;
 
 import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 import android.util.Log;
 
 import org.joda.time.DateTime;
@@ -38,7 +39,10 @@ public class RouteResponseListener implements IRailSuccessResponseListener<Linke
     private final LinkedConnectionsProvider mLinkedConnectionsProvider;
     private final IrailStationProvider mStationProvider;
     private IrailRoutesRequest mRoutesRequest;
+
+    @Nullable
     private final DateTime mDepartureLimit;
+
     private int maxTransfers = 4;
 
     // This makes a lot of checks easiers
@@ -61,7 +65,7 @@ public class RouteResponseListener implements IRailSuccessResponseListener<Linke
     private String mPrevious;
     private String mCurrent;
 
-    public RouteResponseListener(LinkedConnectionsProvider linkedConnectionsProvider, IrailStationProvider stationProvider, IrailRoutesRequest request, DateTime departureLimit) {
+    public RouteResponseListener(@NonNull LinkedConnectionsProvider linkedConnectionsProvider, @NonNull IrailStationProvider stationProvider, @NonNull IrailRoutesRequest request, @Nullable DateTime departureLimit) {
         mLinkedConnectionsProvider = linkedConnectionsProvider;
         mStationProvider = stationProvider;
         mRoutesRequest = request;
@@ -77,7 +81,7 @@ public class RouteResponseListener implements IRailSuccessResponseListener<Linke
 
         mPrevious = data.previous;
         mCurrent = data.current;
-        if (mNext == null){
+        if (mNext == null) {
             mNext = data.next;
         }
 
@@ -90,7 +94,7 @@ public class RouteResponseListener implements IRailSuccessResponseListener<Linke
             LinkedConnection connection = data.connections[i];
 
             // TODO: filter too late / too early
-            if (connection.getDepartureTime().isBefore(mDepartureLimit)) {
+            if (mDepartureLimit != null && connection.getDepartureTime().isBefore(mDepartureLimit)) {
                 hasPassedDepartureLimit = true;
                 continue;
             }
@@ -352,9 +356,9 @@ public class RouteResponseListener implements IRailSuccessResponseListener<Linke
         if (!S.containsKey(mRoutesRequest.getOrigin().getUri())) {
             if (hasPassedDepartureLimit) {
                 RouteResult result = new RouteResult(mRoutesRequest.getOrigin(), mRoutesRequest.getDestination(), mRoutesRequest.getSearchTime(), mRoutesRequest.getTimeDefinition(), new Route[0]);
-                result.setPageInfo(new PagedResourceDescriptor(mPrevious,mCurrent,mNext));
+                result.setPageInfo(new PagedResourceDescriptor(mPrevious, mCurrent, mNext));
                 ((MeteredApi.MeteredRequest) mTag).setMsecParsed(DateTime.now().getMillis());
-                Log.d("RouteResponseListener","Found 0 results");
+                Log.d("RouteResponseListener", "Found 0 results");
                 mRoutesRequest.notifySuccessListeners(result);
             } else {
                 mLinkedConnectionsProvider.getLinkedConnectionsByUrl(data.previous, this, this, mTag);
@@ -407,9 +411,9 @@ public class RouteResponseListener implements IRailSuccessResponseListener<Linke
         });
 
         RouteResult result = new RouteResult(mRoutesRequest.getOrigin(), mRoutesRequest.getDestination(), mRoutesRequest.getSearchTime(), mRoutesRequest.getTimeDefinition(), routes);
-        result.setPageInfo(new PagedResourceDescriptor(mPrevious,mCurrent,mNext));
+        result.setPageInfo(new PagedResourceDescriptor(mPrevious, mCurrent, mNext));
         ((MeteredApi.MeteredRequest) mTag).setMsecParsed(DateTime.now().getMillis());
-        Log.d("RouteResponseListener","Found " +  result.getRoutes().length + " results");
+        Log.d("RouteResponseListener", "Found " + result.getRoutes().length + " results");
         mRoutesRequest.notifySuccessListeners(result);
     }
 

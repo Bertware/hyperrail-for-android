@@ -67,7 +67,14 @@ public class RouteExtendHelper implements IRailSuccessResponseListener<RouteResu
                                                                         mRoutes.getSearchTime());
 
         routesRequest.setCallback(this, this, mMeteredRequest);
-        RouteResponseListener listener = new RouteResponseListener(mLinkedConnectionsProvider, mStationProvider, routesRequest, departureLimit);
+
+        RouteResponseListener listener;
+        if (mRequest.getAction() == ExtendRoutesRequest.Action.PREPEND) {
+            listener = new RouteResponseListener(mLinkedConnectionsProvider, mStationProvider, routesRequest, null);
+        } else {
+            listener = new RouteResponseListener(mLinkedConnectionsProvider, mStationProvider, routesRequest, departureLimit);
+        }
+
         if (mRequest.getRoutes().getTimeDefinition() == RouteTimeDefinition.DEPART_AT) {
             mLinkedConnectionsProvider.getLinkedConnectionsByUrlSpan(start, stop,
                                                                      listener,

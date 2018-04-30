@@ -89,18 +89,8 @@ public class LinkedConnectionsApi implements IrailDataProvider, MeteredApi {
     public void extendLiveboard(@NonNull ExtendLiveboardRequest... requests) {
         for (final ExtendLiveboardRequest request :
                 requests) {
-            extendLiveboard(request);
+            new ExtendLiveboardTask(this).execute(request);
         }
-    }
-
-    private void extendLiveboard(@NonNull final ExtendLiveboardRequest request) {
-        MeteredRequest meteredRequest = new MeteredRequest();
-        meteredRequest.setTag(request.toString());
-        meteredRequest.setMsecStart(DateTime.now().getMillis());
-        mMeteredRequests.add(meteredRequest);
-
-        LiveboardExtendHelper helper = new LiveboardExtendHelper(mLinkedConnectionsProvider, mStationsProvider, request, meteredRequest);
-        helper.extend();
     }
 
     @Override
@@ -116,13 +106,7 @@ public class LinkedConnectionsApi implements IrailDataProvider, MeteredApi {
     public void extendRoutes(@NonNull ExtendRoutesRequest... requests) {
         for (ExtendRoutesRequest request :
                 requests) {
-            MeteredRequest meteredRequest = new MeteredRequest();
-            meteredRequest.setTag(request.toString());
-            meteredRequest.setMsecStart(DateTime.now().getMillis());
-            mMeteredRequests.add(meteredRequest);
-
-            RouteExtendHelper helper = new RouteExtendHelper(mLinkedConnectionsProvider, mStationsProvider, request, meteredRequest);
-            helper.extend();
+            new ExtendRoutesTask(this).execute(request);
         }
     }
 
@@ -369,8 +353,62 @@ public class LinkedConnectionsApi implements IrailDataProvider, MeteredApi {
                     }
                 }, meteredRequest);
             } else {
-                api.mLinkedConnectionsProvider.getLinkedConnectionsByDateForTimeSpan(request.getSearchTime().minusHours(1), request.getSearchTime(), listener, listener, meteredRequest);
+                api.mLinkedConnectionsProvider.getLinkedConnectionsByDateForTimeSpan(request.getSearchTime().minusHours(4), request.getSearchTime(), listener, listener, meteredRequest);
             }
+            return null;
+        }
+    }
+    static class ExtendLiveboardTask extends AsyncTask<ExtendLiveboardRequest, Void, Void> {
+
+        private final WeakReference<LinkedConnectionsApi> mApi;
+
+        ExtendLiveboardTask(LinkedConnectionsApi api) {
+            mApi = new WeakReference<>(api);
+        }
+
+        @Override
+        protected Void doInBackground(ExtendLiveboardRequest... requests) {
+
+            if (mApi.get() == null) {
+                return null;
+            }
+
+            final LinkedConnectionsApi api = mApi.get();
+            final ExtendLiveboardRequest request = requests[0];
+            MeteredRequest meteredRequest = new MeteredRequest();
+            meteredRequest.setTag(request.toString());
+            meteredRequest.setMsecStart(DateTime.now().getMillis());
+            api.mMeteredRequests.add(meteredRequest);
+
+            LiveboardExtendHelper helper = new LiveboardExtendHelper(api.mLinkedConnectionsProvider, api.mStationsProvider, request, meteredRequest);
+            helper.extend();
+            return null;
+        }
+    }
+    static class ExtendRoutesTask extends AsyncTask<ExtendRoutesRequest, Void, Void> {
+
+        private final WeakReference<LinkedConnectionsApi> mApi;
+
+        ExtendRoutesTask(LinkedConnectionsApi api) {
+            mApi = new WeakReference<>(api);
+        }
+
+        @Override
+        protected Void doInBackground(ExtendRoutesRequest... requests) {
+
+            if (mApi.get() == null) {
+                return null;
+            }
+
+            final LinkedConnectionsApi api = mApi.get();
+            final ExtendRoutesRequest request = requests[0];
+            MeteredRequest meteredRequest = new MeteredRequest();
+            meteredRequest.setTag(request.toString());
+            meteredRequest.setMsecStart(DateTime.now().getMillis());
+            api.mMeteredRequests.add(meteredRequest);
+
+            RouteExtendHelper helper = new RouteExtendHelper(api.mLinkedConnectionsProvider, api.mStationsProvider, request, meteredRequest);
+            helper.extend();
             return null;
         }
     }
