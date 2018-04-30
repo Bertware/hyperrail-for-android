@@ -8,8 +8,8 @@ apply plugin: 'com.android.application'
 apply plugin: 'com.google.firebase.firebase-perf'
 apply plugin: 'com.google.firebase.firebase-crash'
 
-def VERSION_CODE = 35
-def VERSION_NAME = 'Research-LC-0.9.5-HR1.0.8#31'
+def VERSION_CODE = 36
+def VERSION_NAME = 'Research-LC-0.9.6-HR1.0.8#31'
 
 android {
     compileSdkVersion 27

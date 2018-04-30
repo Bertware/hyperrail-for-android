@@ -138,14 +138,14 @@ public class RoutesFragment extends RecyclerViewFragment<RouteResult> implements
         request.setCallback(new IRailSuccessResponseListener<RouteResult>() {
                                 @Override
                                 public void onSuccessResponse(@NonNull RouteResult data, Object tag) {
-                                    vRefreshLayout.setRefreshing(false);
-                                    mCurrentRouteResult = data;
 
+                                    mCurrentRouteResult = data;
                                     final LinearLayoutManager mgr = ((LinearLayoutManager) vRecyclerView.getLayoutManager());
                                     if (getActivity() != null) {
                                         getActivity().runOnUiThread(new Runnable() {
                                             @Override
                                             public void run() {
+                                                vRefreshLayout.setRefreshing(false);
                                                 showData(mCurrentRouteResult);
                                                 // Scroll past the load earlier item
                                                 mgr.scrollToPositionWithOffset(1, 0);
@@ -190,6 +190,10 @@ public class RoutesFragment extends RecyclerViewFragment<RouteResult> implements
                                 @Override
                                 public void run() {
                                     // data consists of both old and new routes
+
+                                    if (data == null || data.getRoutes() == null) {
+                                        return;
+                                    }
 
                                     if (data.getRoutes().length == mCurrentRouteResult.getRoutes().length) {
                                         mRouteCardAdapter.disableInfiniteNext(); // Nothing new anymore

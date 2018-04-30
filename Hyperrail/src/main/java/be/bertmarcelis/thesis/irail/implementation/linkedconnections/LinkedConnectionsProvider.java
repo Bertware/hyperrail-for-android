@@ -86,8 +86,6 @@ public class LinkedConnectionsProvider {
     public void getLinkedConnectionsByDate(DateTime startTime, final IRailSuccessResponseListener<LinkedConnections> successListener, final IRailErrorResponseListener errorListener, Object tag) {
         startTime = startTime.withMillisOfSecond(0);
         startTime = startTime.withSecondOfMinute(0);
-        startTime = startTime.minusMinutes(startTime.getMinuteOfHour() % 10);
-
         String url = getLinkedConnectionsUrl(startTime);
 
         getLinkedConnectionsByUrl(url, successListener, errorListener, tag);
@@ -135,7 +133,7 @@ public class LinkedConnectionsProvider {
                 }
                 try {
                     LinkedConnections result = getLinkedConnectionsFromJson(response);
-                    mLinkedConnectionsOfflineCache.store(url, response.toString());
+                    mLinkedConnectionsOfflineCache.store(result, response.toString());
                     successListener.onSuccessResponse(result, tag);
                 } catch (JSONException e) {
                     e.printStackTrace();

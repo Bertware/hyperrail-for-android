@@ -16,7 +16,7 @@ public class LinkedConnectionsOfflineCache extends SQLiteOpenHelper {
 
     // If you change the database schema, you must increment the database version.
     // year/month/day/increment
-    private static final int DATABASE_VERSION = 18030803;
+    private static final int DATABASE_VERSION = 18043000;
 
     // Name of the database file
     private static final String DATABASE_NAME = "linkedconnections.db";
@@ -24,10 +24,11 @@ public class LinkedConnectionsOfflineCache extends SQLiteOpenHelper {
     // Logtag for logging purpose
     private static final String LOGTAG = "LinkedConnectionsCache";
 
-    static final String SQL_CREATE_TABLE = "CREATE TABLE cache (_id INTEGER PRIMARY KEY AUTOINCREMENT, url TEXT NOT NULL UNIQUE, data TEXT NOT NULL, datetime INTEGER)";
-    static final String SQL_CREATE_INDEX = "CREATE INDEX cache_index ON cache (url);";
+    private static final String SQL_CREATE_TABLE = "CREATE TABLE cache (_id INTEGER PRIMARY KEY AUTOINCREMENT, url TEXT NOT NULL UNIQUE, next TEXT NOT NULL, data TEXT NOT NULL, datetime INTEGER)";
+    private static final String SQL_CREATE_INDEX = "CREATE INDEX cache_index ON cache (url);";
+    public static final String TABLE = "cache";
 
-    public LinkedConnectionsOfflineCache(Context context) {
+    LinkedConnectionsOfflineCache(Context context) {
         super(context, DATABASE_NAME, null, DATABASE_VERSION);
     }
 
@@ -43,20 +44,39 @@ public class LinkedConnectionsOfflineCache extends SQLiteOpenHelper {
         onCreate(db);
     }
 
-    public void store(String url, String data) {
+    public void store(LinkedConnections connections, String data) {
         ContentValues values = new ContentValues();
-        values.put("url", url);
+        values.put("url", connections.current);
+        values.put("next", connections.next);
         values.put("data", data);
         values.put("datetime", DateTime.now().getMillis());
         SQLiteDatabase db = getWritableDatabase();
-        int id = (int) db.insertWithOnConflict("cache", null, values, SQLiteDatabase.CONFLICT_REPLACE);
+        int id = (int) db.insertWithOnConflict(TABLE, null, values, SQLiteDatabase.CONFLICT_REPLACE);
     }
 
     public CachedLinkedConnections load(String url) {
         SQLiteDatabase db = getReadableDatabase();
-        Cursor c = db.query("cache", new String[]{"url", "data","datetime"}, "url=?", new String[]{url}, null, null, null);
+        Cursor c = db.query(TABLE, new String[]{"url", "data", "datetime"}, "url=?", new String[]{url}, null, null, null);
 
-        if (c.getCount() == 0){
+        if (c.getCount() == 0) {
+            c.close();
+            return loadApproximate(url);
+        }
+
+        CachedLinkedConnections result = new CachedLinkedConnections();
+        c.moveToFirst();
+        result.createdAt = new DateTime(c.getLong(c.getColumnIndex("datetime")));
+        result.data = c.getString(c.getColumnIndex("data"));
+        result.url = c.getString(c.getColumnIndex("url"));
+        c.close();
+        return result;
+    }
+
+    private CachedLinkedConnections loadApproximate(String url) {
+        SQLiteDatabase db = getReadableDatabase();
+        Cursor c = db.query(TABLE, new String[]{"url", "data", "datetime"}, "url<=? AND next>=?", new String[]{url,url}, null, null, "url DESC");
+
+        if (c.getCount() == 0) {
             c.close();
             return null;
         }
@@ -71,7 +91,7 @@ public class LinkedConnectionsOfflineCache extends SQLiteOpenHelper {
     }
 
     public class CachedLinkedConnections {
-        public String url, data;
+        String url, data;
         public DateTime createdAt;
     }
 }

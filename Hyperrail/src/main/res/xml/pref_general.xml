@@ -139,7 +139,7 @@
         android:title="API">
 
         <ListPreference
-            android:defaultValue="irail"
+            android:defaultValue="lc2irail"
             android:entries="@array/pref_list_api_keys"
             android:entryValues="@array/pref_list_api_keys"
             android:key="api"

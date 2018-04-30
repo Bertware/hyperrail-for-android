@@ -135,42 +135,46 @@ public class LiveboardFragment extends RecyclerViewFragment<Liveboard> implement
         mRequest.setCallback(new IRailSuccessResponseListener<Liveboard>() {
             @Override
             public void onSuccessResponse(@NonNull final Liveboard data, Object tag) {
-                vRefreshLayout.setRefreshing(false);
 
-                // store retrieved data
-                mCurrentLiveboard = data;
-                // Show retrieved data
-                showData(mCurrentLiveboard);
+                if (getActivity() != null) {
+                    getActivity().runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            vRefreshLayout.setRefreshing(false);
 
-if (getActivity() != null)
-                getActivity().runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        // If we didn't get a result, try the next data
-                        if (data.getStops().length == 0) {
-                            LiveboardFragment.this.loadNextRecyclerviewItems();
-                        } else {
-                            // Enable infinite scrolling again
-                            mLiveboardCardAdapter.setInfiniteScrolling(true);
+                            // store retrieved data
+                            mCurrentLiveboard = data;
+                            // Show retrieved data
+                            showData(mCurrentLiveboard);
+
+                            // If we didn't get a result, try the next data
+                            if (data.getStops().length == 0) {
+                                LiveboardFragment.this.loadNextRecyclerviewItems();
+                            } else {
+                                // Enable infinite scrolling again
+                                mLiveboardCardAdapter.setInfiniteScrolling(true);
+                            }
+
+                            // Scroll past the load earlier item
+                            ((LinearLayoutManager) vRecyclerView.getLayoutManager()).scrollToPositionWithOffset(1, 0);
                         }
-
-                        // Scroll past the load earlier item
-                        ((LinearLayoutManager) vRecyclerView.getLayoutManager()).scrollToPositionWithOffset(1, 0);
-                    }
-                });
+                    });
+                }
             }
 
         }, new IRailErrorResponseListener() {
             @Override
-            public void onErrorResponse(@NonNull final Exception e, Object tag) {if (getActivity() != null)
-                getActivity().runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        vRefreshLayout.setRefreshing(false);
-                        // only finish if we're loading new data
-                        ErrorDialogFactory.showErrorDialog(e, LiveboardFragment.this.getActivity(), mCurrentLiveboard == null);
-                    }
-                });
+            public void onErrorResponse(@NonNull final Exception e, Object tag) {
+                if (getActivity() != null) {
+                    getActivity().runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            vRefreshLayout.setRefreshing(false);
+                            // only finish if we're loading new data
+                            ErrorDialogFactory.showErrorDialog(e, LiveboardFragment.this.getActivity(), mCurrentLiveboard == null);
+                        }
+                    });
+                }
             }
         }, null);
         api.getLiveboard(mRequest);
@@ -188,40 +192,43 @@ if (getActivity() != null)
         ExtendLiveboardRequest request = new ExtendLiveboardRequest(mCurrentLiveboard, ExtendLiveboardRequest.Action.APPEND);
         request.setCallback(new IRailSuccessResponseListener<Liveboard>() {
             @Override
-            public void onSuccessResponse(@NonNull Liveboard data, Object tag) {
-                // Compare the new one with the old one to check if stops have been added
-                if (data.getStops().length == mCurrentLiveboard.getStops().length) {
-                    mLiveboardCardAdapter.disableInfiniteNext();
-                }
-                mCurrentLiveboard = data;
-                showData(mCurrentLiveboard);
-
-                mLiveboardCardAdapter.setNextLoaded();
-
+            public void onSuccessResponse(@NonNull final Liveboard data, Object tag) {
                 // Scroll past the "load earlier"
-                if (getActivity() != null)
-                getActivity().runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        LinearLayoutManager mgr = ((LinearLayoutManager) vRecyclerView.getLayoutManager());
-                        if (mgr.findFirstVisibleItemPosition() == 0) {
-                            mgr.scrollToPositionWithOffset(1, 0);
+                if (getActivity() != null) {
+                    getActivity().runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            // Compare the new one with the old one to check if stops have been added
+                            if (data.getStops().length == mCurrentLiveboard.getStops().length) {
+                                mLiveboardCardAdapter.disableInfiniteNext();
+                            }
+                            mCurrentLiveboard = data;
+                            showData(mCurrentLiveboard);
+
+                            mLiveboardCardAdapter.setNextLoaded();
+
+                            LinearLayoutManager mgr = ((LinearLayoutManager) vRecyclerView.getLayoutManager());
+                            if (mgr.findFirstVisibleItemPosition() == 0) {
+                                mgr.scrollToPositionWithOffset(1, 0);
+                            }
                         }
-                    }
-                });
+                    });
+                }
             }
 
         }, new IRailErrorResponseListener() {
             @Override
-            public void onErrorResponse(@NonNull final Exception e, Object tag) {if (getActivity() != null)
-                getActivity().runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        ErrorDialogFactory.showErrorDialog(e, LiveboardFragment.this.getActivity(), false);
-                        mLiveboardCardAdapter.setNextError(true);
-                        mLiveboardCardAdapter.setNextLoaded();
-                    }
-                });
+            public void onErrorResponse(@NonNull final Exception e, Object tag) {
+                if (getActivity() != null) {
+                    getActivity().runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            ErrorDialogFactory.showErrorDialog(e, LiveboardFragment.this.getActivity(), false);
+                            mLiveboardCardAdapter.setNextError(true);
+                            mLiveboardCardAdapter.setNextLoaded();
+                        }
+                    });
+                }
             }
         }, null);
         IrailFactory.getDataProviderInstance().extendLiveboard(request);
@@ -239,41 +246,46 @@ if (getActivity() != null)
         request.setCallback(new IRailSuccessResponseListener<Liveboard>() {
             @Override
             public void onSuccessResponse(@NonNull final Liveboard data, Object tag) {
-                // Compare the new one with the old one to check if stops have been added
-                if (data.getStops().length == mCurrentLiveboard.getStops().length) {
-                    ErrorDialogFactory.showErrorDialog(new FileNotFoundException("No results"), getActivity(), false);
-                    mLiveboardCardAdapter.disableInfinitePrevious();
-                }if (getActivity() != null)
-                getActivity().runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        LinearLayoutManager mgr = ((LinearLayoutManager) vRecyclerView.getLayoutManager());
-                        if (mgr.findFirstVisibleItemPosition() == 0) {
-                            int oldLength = mLiveboardCardAdapter.getItemCount();
+                if (getActivity() != null) {
+                    getActivity().runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            // Compare the new one with the old one to check if stops have been added
+                            if (data.getStops().length == mCurrentLiveboard.getStops().length) {
+                                ErrorDialogFactory.showErrorDialog(new FileNotFoundException("No results"), getActivity(), false);
+                                mLiveboardCardAdapter.disableInfinitePrevious();
+                            }
 
-                            mCurrentLiveboard = data;
-                            showData(mCurrentLiveboard);
+                            LinearLayoutManager mgr = ((LinearLayoutManager) vRecyclerView.getLayoutManager());
+                            if (mgr.findFirstVisibleItemPosition() == 0) {
+                                int oldLength = mLiveboardCardAdapter.getItemCount();
 
-                            int newLength = mLiveboardCardAdapter.getItemCount();
-                            // Scroll past the load earlier item
-                            ((LinearLayoutManager) vRecyclerView.getLayoutManager()).scrollToPositionWithOffset(newLength - oldLength, 0);
+                                mCurrentLiveboard = data;
+                                showData(mCurrentLiveboard);
 
-                            mLiveboardCardAdapter.setPrevLoaded();
+                                int newLength = mLiveboardCardAdapter.getItemCount();
+                                // Scroll past the load earlier item
+                                ((LinearLayoutManager) vRecyclerView.getLayoutManager()).scrollToPositionWithOffset(newLength - oldLength, 0);
+
+                                mLiveboardCardAdapter.setPrevLoaded();
+                            }
                         }
-                    }
-                });
+                    });
+                }
 
             }
         }, new IRailErrorResponseListener() {
             @Override
-            public void onErrorResponse(@NonNull final Exception e, Object tag) {if (getActivity() != null)
-                getActivity().runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        ErrorDialogFactory.showErrorDialog(e, LiveboardFragment.this.getActivity(), false);
-                        mLiveboardCardAdapter.setPrevLoaded();
-                    }
-                });
+            public void onErrorResponse(@NonNull final Exception e, Object tag) {
+                if (getActivity() != null) {
+                    getActivity().runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            ErrorDialogFactory.showErrorDialog(e, LiveboardFragment.this.getActivity(), false);
+                            mLiveboardCardAdapter.setPrevLoaded();
+                        }
+                    });
+                }
 
             }
         }, null);
@@ -293,8 +305,10 @@ if (getActivity() != null)
     }
 
     @Override
-    public void onRecyclerItemLongClick(RecyclerView.Adapter sender, VehicleStop object) {if (getActivity() != null)
-        (new VehiclePopupContextMenu(getActivity(), object)).show();
+    public void onRecyclerItemLongClick(RecyclerView.Adapter sender, VehicleStop object) {
+        if (getActivity() != null) {
+            (new VehiclePopupContextMenu(getActivity(), object)).show();
+        }
     }
 
 }

@@ -68,12 +68,17 @@ public class IrailFactory {
     @AddTrace(name = "IrailFactory.setup")
     public static void setup(Context applicationContext) {
         String api = PreferenceManager.getDefaultSharedPreferences(applicationContext).getString("api", "lc2irail");
+
         if (lastCreated.equals(api)){
             return;
         }
+
+        if (!lastCreated.isEmpty()){
+            logMeteredApiData(applicationContext);
+        }
+
         lastCreated = api;
         stationProviderInstance = new StationsDb(applicationContext);
-        logMeteredApiData(applicationContext);
 
         switch (api) {
             case "irail":
@@ -127,11 +132,18 @@ public class IrailFactory {
         if (mRq == null) {
             mRq = Volley.newRequestQueue(context);
         }
-        final String name = getDataProviderInstance().getClass().getName();
+        String name = "unknown";
+        if (dataProviderInstance instanceof Lc2IrailApi){
+            name = "lc2irail";
+        }
+        if (dataProviderInstance instanceof  LinkedConnectionsApi){
+            name = "lc";
+        }
+        final String finalName = name;
         new AlertDialog.Builder(context).setMessage("Testresultaten opslaan?").setPositiveButton("Ja", new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int which) {
-                post(name, body.toString());
+                post(finalName, body.toString());
             }
         }).setNegativeButton("Nee", null).show();
     }

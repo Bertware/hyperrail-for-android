@@ -122,6 +122,7 @@ public class VehicleResponseListener implements IRailSuccessResponseListener<Lin
     @Override
     public void onErrorResponse(@NonNull Exception e, Object tag) {
         Log.w("VehicleResponseListener", "Failed to load page! " + e.getMessage());
+        mRequest.notifyErrorListeners(e);
     }
 }
 
