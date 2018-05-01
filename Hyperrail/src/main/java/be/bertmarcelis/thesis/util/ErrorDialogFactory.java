@@ -21,6 +21,8 @@ import android.util.Log;
 import com.android.volley.NoConnectionError;
 import com.android.volley.ServerError;
 
+import java.io.FileNotFoundException;
+
 import be.bertmarcelis.thesis.R;
 
 /**
@@ -56,6 +58,8 @@ public class ErrorDialogFactory {
             }
         } else if (exception instanceof NoConnectionError) {
             return showNetworkErrorDialog(context, finish);
+        } else if (exception instanceof FileNotFoundException) {
+            return showNotFoundErrorDialog(context, finish);
         } else {
             return showGeneralErrorDialog(context, finish);
         }

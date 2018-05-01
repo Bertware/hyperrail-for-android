@@ -201,7 +201,6 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
 
         // TESTING PURPOSES
         IrailFactory.setup(this);
-
     }
 
     /**
@@ -290,6 +289,17 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
     @Override
     public boolean onNavigationItemSelected(@NonNull MenuItem item) {
         switch (item.getItemId()) {
+            case R.id.action_test1:
+                PreferenceManager.getDefaultSharedPreferences(this).edit().putString("api", "lc2irail").apply();
+                IrailFactory.setup(this);
+                break;
+            case R.id.action_test2:
+                PreferenceManager.getDefaultSharedPreferences(this).edit().putString("api", "lc").apply();
+                IrailFactory.setup(this);
+                break;
+            case R.id.action_store:
+                IrailFactory.logMeteredApiData(this,false);
+                break;
             case R.id.action_liveboard:
                 setView(VIEW_TYPE_LIVEBOARD, null);
                 break;

@@ -26,6 +26,8 @@ import android.view.ViewGroup;
 
 import org.joda.time.DateTime;
 
+import java.io.FileNotFoundException;
+
 import be.bertmarcelis.thesis.R;
 import be.bertmarcelis.thesis.activities.searchresult.RouteDetailActivity;
 import be.bertmarcelis.thesis.adapter.OnRecyclerItemClickListener;
@@ -137,7 +139,7 @@ public class RoutesFragment extends RecyclerViewFragment<RouteResult> implements
                                                             mRequest.getSearchTime());
         request.setCallback(new IRailSuccessResponseListener<RouteResult>() {
                                 @Override
-                                public void onSuccessResponse(@NonNull RouteResult data, Object tag) {
+                                public void onSuccessResponse(@NonNull final RouteResult data, Object tag) {
 
                                     mCurrentRouteResult = data;
                                     final LinearLayoutManager mgr = ((LinearLayoutManager) vRecyclerView.getLayoutManager());
@@ -146,6 +148,13 @@ public class RoutesFragment extends RecyclerViewFragment<RouteResult> implements
                                             @Override
                                             public void run() {
                                                 vRefreshLayout.setRefreshing(false);
+
+                                                if (data.getRoutes().length == 0){
+                                                    ErrorDialogFactory.showErrorDialog(new FileNotFoundException(), getActivity(), true);
+                                                    mRouteCardAdapter.setNextError(true);
+                                                    mRouteCardAdapter.setNextLoaded();
+                                                }
+
                                                 showData(mCurrentRouteResult);
                                                 // Scroll past the load earlier item
                                                 mgr.scrollToPositionWithOffset(1, 0);

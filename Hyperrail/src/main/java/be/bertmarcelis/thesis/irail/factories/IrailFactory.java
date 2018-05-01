@@ -69,12 +69,8 @@ public class IrailFactory {
     public static void setup(Context applicationContext) {
         String api = PreferenceManager.getDefaultSharedPreferences(applicationContext).getString("api", "lc2irail");
 
-        if (lastCreated.equals(api)){
+        if (lastCreated.equals(api)) {
             return;
-        }
-
-        if (!lastCreated.isEmpty()){
-            logMeteredApiData(applicationContext);
         }
 
         lastCreated = api;
@@ -113,7 +109,7 @@ public class IrailFactory {
         return dataProviderInstance;
     }
 
-    private static void logMeteredApiData(Context context) {
+    public static void logMeteredApiData(final Context context, boolean ask) {
         if (dataProviderInstance == null) {
             return;
         }
@@ -133,19 +129,26 @@ public class IrailFactory {
             mRq = Volley.newRequestQueue(context);
         }
         String name = "unknown";
-        if (dataProviderInstance instanceof Lc2IrailApi){
+        if (dataProviderInstance instanceof Lc2IrailApi) {
             name = "lc2irail";
         }
-        if (dataProviderInstance instanceof  LinkedConnectionsApi){
+        if (dataProviderInstance instanceof LinkedConnectionsApi) {
             name = "lc";
         }
         final String finalName = name;
-        new AlertDialog.Builder(context).setMessage("Testresultaten opslaan?").setPositiveButton("Ja", new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface dialog, int which) {
-                post(finalName, body.toString());
-            }
-        }).setNegativeButton("Nee", null).show();
+        if (ask) {
+            new AlertDialog.Builder(context).setMessage("Testresultaten opslaan?").setPositiveButton("Ja", new DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(DialogInterface dialog, int which) {
+                    post(finalName, body.toString());
+                    Toast.makeText(context, "Testresultaten opgeslagen", Toast.LENGTH_LONG).show();
+                }
+            }).setNegativeButton("Nee", null).show();
+        } else {
+            post(finalName, body.toString());
+            Toast.makeText(context, "Testresultaten opgeslagen", Toast.LENGTH_LONG).show();
+        }
+
     }
 
     private static void post(final String name, final String data) {

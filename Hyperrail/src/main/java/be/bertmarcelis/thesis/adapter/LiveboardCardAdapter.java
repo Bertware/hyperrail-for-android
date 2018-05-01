@@ -68,6 +68,13 @@ public class LiveboardCardAdapter extends InfiniteScrollingAdapter<VehicleStop> 
 
         if (liveboard == null || liveboard.getStops() == null || liveboard.getStops().length == 0) {
             displayList = null;
+
+            mRecyclerView.post(new Runnable() {
+                public void run() {
+                    notifyDataSetChanged();
+                }
+            });
+
             return;
         }
 

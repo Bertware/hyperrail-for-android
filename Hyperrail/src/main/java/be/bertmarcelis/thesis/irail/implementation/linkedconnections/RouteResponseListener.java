@@ -41,7 +41,8 @@ public class RouteResponseListener implements IRailSuccessResponseListener<Linke
     private IrailRoutesRequest mRoutesRequest;
 
     @Nullable
-    private final DateTime mDepartureLimit;
+    private DateTime mDepartureLimit;
+    private int maxMinutes;
 
     private int maxTransfers = 4;
 
@@ -72,6 +73,11 @@ public class RouteResponseListener implements IRailSuccessResponseListener<Linke
         mDepartureLimit = departureLimit;
     }
 
+    public RouteResponseListener(LinkedConnectionsProvider linkedConnectionsProvider, IrailStationProvider stationProvider, IrailRoutesRequest routesRequest, DateTime departureLimit, int i) {
+        this(linkedConnectionsProvider,stationProvider,routesRequest,departureLimit);
+
+    }
+
     private void process(LinkedConnections data) throws StationNotResolvedException {
         // Keep searching
         // - while no results have been found
@@ -87,6 +93,14 @@ public class RouteResponseListener implements IRailSuccessResponseListener<Linke
 
         if (data.connections.length == 0) {
             mLinkedConnectionsProvider.getLinkedConnectionsByUrl(data.previous, this, this, null);
+        }
+
+        if (maxMinutes > 0){
+            DateTime limitByMinutes = data.connections[data.connections.length -1].getDepartureTime().minusMinutes(maxMinutes);
+            if (limitByMinutes.isBefore(mDepartureLimit)){
+                mDepartureLimit = limitByMinutes;
+            }
+            maxMinutes = 0;
         }
 
         boolean hasPassedDepartureLimit = false;

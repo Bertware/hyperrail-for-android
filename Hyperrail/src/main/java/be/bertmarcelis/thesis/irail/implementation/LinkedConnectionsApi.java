@@ -358,6 +358,7 @@ public class LinkedConnectionsApi implements IrailDataProvider, MeteredApi {
             return null;
         }
     }
+
     static class ExtendLiveboardTask extends AsyncTask<ExtendLiveboardRequest, Void, Void> {
 
         private final WeakReference<LinkedConnectionsApi> mApi;
@@ -385,6 +386,7 @@ public class LinkedConnectionsApi implements IrailDataProvider, MeteredApi {
             return null;
         }
     }
+
     static class ExtendRoutesTask extends AsyncTask<ExtendRoutesRequest, Void, Void> {
 
         private final WeakReference<LinkedConnectionsApi> mApi;

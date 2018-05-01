@@ -4,6 +4,8 @@ import android.support.annotation.NonNull;
 
 import org.joda.time.DateTime;
 
+import java.io.FileNotFoundException;
+
 import be.bertmarcelis.thesis.irail.contracts.IRailErrorResponseListener;
 import be.bertmarcelis.thesis.irail.contracts.IRailSuccessResponseListener;
 import be.bertmarcelis.thesis.irail.contracts.IrailStationProvider;
@@ -26,6 +28,7 @@ public class RouteExtendHelper implements IRailSuccessResponseListener<RouteResu
     private final ExtendRoutesRequest mRequest;
     private final MeteredApi.MeteredRequest mMeteredRequest;
     private RouteResult mRoutes;
+    int attempts = 0;
 
     public RouteExtendHelper(LinkedConnectionsProvider linkedConnectionsProvider, IrailStationProvider stationProvider, ExtendRoutesRequest request, MeteredApi.MeteredRequest meteredRequest) {
         mLinkedConnectionsProvider = linkedConnectionsProvider;
@@ -39,6 +42,13 @@ public class RouteExtendHelper implements IRailSuccessResponseListener<RouteResu
     }
 
     private void extend(RouteResult routes) {
+        attempts++;
+
+        if (attempts > 10){
+            mRequest.notifyErrorListeners(new FileNotFoundException());
+            return;
+        }
+
         mRoutes = routes;
         String start = null, stop = null;
         DateTime departureLimit;
@@ -72,7 +82,7 @@ public class RouteExtendHelper implements IRailSuccessResponseListener<RouteResu
         if (mRequest.getAction() == ExtendRoutesRequest.Action.PREPEND) {
             listener = new RouteResponseListener(mLinkedConnectionsProvider, mStationProvider, routesRequest, null);
         } else {
-            listener = new RouteResponseListener(mLinkedConnectionsProvider, mStationProvider, routesRequest, departureLimit);
+            listener = new RouteResponseListener(mLinkedConnectionsProvider, mStationProvider, routesRequest, departureLimit,8*60);
         }
 
         if (mRequest.getRoutes().getTimeDefinition() == RouteTimeDefinition.DEPART_AT) {

@@ -53,6 +53,13 @@ public class RouteCardAdapter extends InfiniteScrollingAdapter<Route> {
         if (routeResult == null || routeResult.getRoutes() == null || routeResult.getRoutes().length < 1) {
             this.routes = null;
             this.displayList = null;
+
+            mRecyclerView.post(new Runnable() {
+                public void run() {
+                    notifyDataSetChanged();
+                }
+            });
+
             return;
         }
 
