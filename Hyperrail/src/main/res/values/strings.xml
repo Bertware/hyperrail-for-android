@@ -1,6 +1,6 @@
 <resources>
     <string name="app_name">HyperRail Research</string>
-    <string name="powered_by_irail_be">RESEARCH VERSION\nPowered by irail.be</string>
+    <string name="powered_by_irail_be">RESEARCH VERSION LS\nPowered by irail.be</string>
 
     <string name="title_disturbances">Disturbances</string>
     <string name="title_liveboard">Liveboard</string>

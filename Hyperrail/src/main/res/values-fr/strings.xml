@@ -6,7 +6,7 @@
 
 <resources>
     <string name="app_name">HyperRail Research</string>
-    <string name="powered_by_irail_be">RESEARCH VERSION\nPowered by irail.be</string>
+    <string name="powered_by_irail_be">RESEARCH VERSION LS\nPowered by irail.be</string>
     <string name="action_from">Nouvelle route d’ici</string>
     <string name="action_mark_as_favorite">Marquez comme favori</string>
     <string name="action_share">Partager cette recherche</string>

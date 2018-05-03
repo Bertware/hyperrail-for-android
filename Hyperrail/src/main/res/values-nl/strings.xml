@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">HyperRail Research</string>
-    <string name="powered_by_irail_be">RESEARCH VERSION\nPowered by irail.be</string>
+    <string name="powered_by_irail_be">RESEARCH VERSION LS\nPowered by irail.be</string>
 
     <string name="title_disturbances">Storingen</string>
     <string name="title_liveboard">Vertrekken</string>
