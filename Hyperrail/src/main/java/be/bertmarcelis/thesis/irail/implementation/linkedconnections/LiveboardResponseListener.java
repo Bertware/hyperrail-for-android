@@ -8,6 +8,7 @@ import com.google.firebase.perf.metrics.AddTrace;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
 
+import java.io.FileNotFoundException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -87,6 +88,7 @@ public class LiveboardResponseListener implements IRailSuccessResponseListener<L
             }
         }
 
+
         if (request.getType() == Liveboard.LiveboardType.DEPARTURES && departures.size() > 0 || request.getType() == ARRIVALS && arrivals.size() > 0) {
             VehicleStop[] stoparray = generateStopArray();
             Liveboard liveboard = new Liveboard(request.getStation(), stoparray, request.getSearchTime(), request.getType(), request.getTimeDefinition());
@@ -99,14 +101,20 @@ public class LiveboardResponseListener implements IRailSuccessResponseListener<L
             if (request.getTimeDefinition() == RouteTimeDefinition.ARRIVE_AT) {
                 link = data.previous;
             }
+
+            if (data.connections.length > 0 && data.connections[0].getDepartureTime().isAfter(request.getSearchTime().plusHours(24))) {
+                request.notifyErrorListeners(new FileNotFoundException());
+                return;
+            }
+
             mLinkedConnectionsProvider.getLinkedConnectionsByUrl(link,
                                                                  this,
                                                                  new IRailErrorResponseListener() {
-                                                                    @Override
-                                                                    public void onErrorResponse(@NonNull Exception e, Object tag) {
-                                                                        Log.w("LiveboardResponseLstnr", "Getting next LC page failed");
-                                                                    }
-                                                                },
+                                                                     @Override
+                                                                     public void onErrorResponse(@NonNull Exception e, Object tag) {
+                                                                         Log.w("LiveboardResponseLstnr", "Getting next LC page failed");
+                                                                     }
+                                                                 },
                                                                  tag);
         }
 

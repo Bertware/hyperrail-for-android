@@ -17,6 +17,8 @@ import com.android.volley.toolbox.BasicNetwork;
 import com.android.volley.toolbox.DiskBasedCache;
 import com.android.volley.toolbox.HurlStack;
 import com.android.volley.toolbox.JsonObjectRequest;
+import com.android.volley.toolbox.StringRequest;
+import com.bluelinelabs.logansquare.LoganSquare;
 import com.google.firebase.analytics.FirebaseAnalytics;
 import com.google.firebase.perf.FirebasePerformance;
 import com.google.firebase.perf.metrics.Trace;
@@ -30,6 +32,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -135,9 +138,9 @@ public class LinkedConnectionsProvider {
         final Trace tracing = FirebasePerformance.getInstance().newTrace("LinkedConnectionsProvider.getByUrl");
         tracing.start();
 
-        Response.Listener<JSONObject> volleySuccessListener = new Response.Listener<JSONObject>() {
+        Response.Listener<String> volleySuccessListener = new Response.Listener<String>() {
             @Override
-            public void onResponse(JSONObject response) {
+            public void onResponse(String response) {
                 if (BuildConfig.DEBUG) {
                     Log.w("LCProvider", "Getting LC page successful: " + url);
                 }
@@ -146,7 +149,7 @@ public class LinkedConnectionsProvider {
                     mLinkedConnectionsOfflineCache.store(result, response.toString());
                     tracing.stop();
                     successListener.onSuccessResponse(result, tag);
-                } catch (JSONException e) {
+                } catch (Exception e) {
                     e.printStackTrace();
                     tracing.stop();
                     errorListener.onErrorResponse(e, tag);
@@ -174,9 +177,9 @@ public class LinkedConnectionsProvider {
                         if (BuildConfig.DEBUG) {
                             Log.w("LCProvider", "Getting LC page " + url + " failed: offline cache hit!");
                         }
-                        LinkedConnections result = getLinkedConnectionsFromJson(new JSONObject(cache.data));
+                        LinkedConnections result = getLinkedConnectionsFromJson(cache.data);
                         successListener.onSuccessResponse(result, tag);
-                    } catch (JSONException e) {
+                    } catch (Exception e) {
                         e.printStackTrace();
                         tracing.stop();
                         errorListener.onErrorResponse(error, tag);
@@ -185,9 +188,9 @@ public class LinkedConnectionsProvider {
             }
         };
 
-        JsonObjectRequest jsObjRequest = new JsonObjectRequest(Request.Method.GET, url, null,
-                                                               volleySuccessListener,
-                                                               volleyErrorListener) {
+        StringRequest jsObjRequest = new StringRequest(Request.Method.GET, url,
+                                                           volleySuccessListener,
+                                                           volleyErrorListener) {
             @Override
             public Map<String, String> getHeaders() {
                 Map<String, String> headers = new HashMap<>();
@@ -205,9 +208,9 @@ public class LinkedConnectionsProvider {
                 if (BuildConfig.DEBUG) {
                     Log.w("LCProvider", "Fulfilled without network");
                 }
-                volleySuccessListener.onResponse(new JSONObject(cache.data));
+                volleySuccessListener.onResponse(cache.data);
                 return;
-            } catch (JSONException e) {
+            } catch (Exception e) {
                 e.printStackTrace();
                 tracing.stop();
             }
@@ -236,9 +239,9 @@ public class LinkedConnectionsProvider {
     }
 
     @NonNull
-    private LinkedConnections getLinkedConnectionsFromJson(JSONObject response) throws
-            JSONException {
-        LinkedConnections result = new LinkedConnections();
+    private LinkedConnections getLinkedConnectionsFromJson(String response) throws
+            JSONException, IOException {
+       /* LinkedConnections result = new LinkedConnections();
         result.current = response.getString("@id");
         result.next = response.getString("hydra:next");
         result.previous = response.getString("hydra:previous");
@@ -263,13 +266,14 @@ public class LinkedConnectionsProvider {
 
         result.connections = new LinkedConnection[connections.size()];
         result.connections = connections.toArray(result.connections);
-        Arrays.sort(result.connections, new Comparator<LinkedConnection>() {
+        */
+        return LoganSquare.parse(response,LinkedConnections.class);
+       /* Arrays.sort(result.connections, new Comparator<LinkedConnection>() {
             @Override
             public int compare(LinkedConnection o1, LinkedConnection o2) {
                 return o1.getDepartureTime().compareTo(o2.getDepartureTime());
             }
-        });
-        return result;
+        });*/
     }
 
     public void setCacheEnabled(boolean cacheEnabled) {
