@@ -12,38 +12,34 @@ import org.json.JSONObject;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.HashMap;
 
-import be.bertmarcelis.thesis.R;
 import be.bertmarcelis.thesis.irail.contracts.IRailErrorResponseListener;
 import be.bertmarcelis.thesis.irail.contracts.IRailSuccessResponseListener;
-import be.bertmarcelis.thesis.irail.contracts.IrailDataProvider;
 import be.bertmarcelis.thesis.irail.contracts.IrailStationProvider;
 import be.bertmarcelis.thesis.irail.contracts.RouteTimeDefinition;
 import be.bertmarcelis.thesis.irail.contracts.StationNotResolvedException;
 import be.bertmarcelis.thesis.irail.db.StationsDb;
-import be.bertmarcelis.thesis.irail.implementation.Lc2IrailApi;
 import be.bertmarcelis.thesis.irail.implementation.LinkedConnectionsApi;
 import be.bertmarcelis.thesis.irail.implementation.Liveboard;
-import be.bertmarcelis.thesis.irail.implementation.Vehicle;
+import be.bertmarcelis.thesis.irail.implementation.RouteResult;
+import be.bertmarcelis.thesis.irail.implementation.requests.ExtendRoutesRequest;
 import be.bertmarcelis.thesis.irail.implementation.requests.IrailLiveboardRequest;
-import be.bertmarcelis.thesis.irail.implementation.requests.IrailVehicleRequest;
+import be.bertmarcelis.thesis.irail.implementation.requests.IrailRoutesRequest;
 
 /**
  * Created in be.hyperrail.android.test on 27/03/2018.
  */
 
 @RunWith(AndroidJUnit4.class)
-public class DeparturesArrivalsBenchmark implements IRailErrorResponseListener, IRailSuccessResponseListener<Liveboard> {
+public class ConnectionsBenchmark implements IRailErrorResponseListener, IRailSuccessResponseListener<RouteResult> {
 
-    private volatile   HashMap<String, Long> start;
-    private volatile   HashMap<String, Long> end;
-    private volatile   ArrayList<String> done;
+    private volatile HashMap<String, Long> start;
+    private volatile HashMap<String, Long> end;
+    private volatile ArrayList<String> done;
     private volatile boolean free = true;
 
     /**
@@ -52,25 +48,28 @@ public class DeparturesArrivalsBenchmark implements IRailErrorResponseListener, 
     @Test
     public void benchmark() throws StationNotResolvedException {
 
-        final ArrayList<String> stations = new ArrayList<>();
-        final ArrayList<DateTime> queryDates = new ArrayList<>();
+        final ArrayList<IrailRoutesRequest> requests = new ArrayList<>();
 
         ArrayList<String> querylog = new ArrayList<>();
 
-        try (InputStream in = InstrumentationRegistry.getContext().getResources().openRawResource(be.bertmarcelis.thesis.test.R.raw.irailapi_liveboard)) {
+        try (InputStream in = InstrumentationRegistry.getContext().getResources().openRawResource(R.raw.irailapi_connections)) {
             java.util.Scanner s = new java.util.Scanner(in).useDelimiter("\\A");
             while (s.hasNextLine()) querylog.add(s.nextLine());
         } catch (IOException e) {
             e.printStackTrace();
         }
+        IrailStationProvider stationProvider = new StationsDb(InstrumentationRegistry.getTargetContext());
 
         for (String s : querylog) {
             JSONObject json = null;
             try {
                 json = new JSONObject(s);
                 if (!json.has("query")) continue;
-                stations.add(json.getJSONObject("query").getJSONObject("departureStop").getString("@id"));
-                queryDates.add(DateTime.parse(json.getJSONObject("query").getString("dateTime")));
+                IrailRoutesRequest request = new IrailRoutesRequest(stationProvider.getStationByUri(json.getJSONObject("query").getJSONObject("departureStop").getString("@id")),
+                                                                    stationProvider.getStationByUri(json.getJSONObject("query").getJSONObject("arrivalStop").getString("@id")),
+                                                                    RouteTimeDefinition.DEPART_AT,
+                                                                    DateTime.parse(json.getJSONObject("query").getString("dateTime")));
+                requests.add(request);
             } catch (JSONException e) {
                 e.printStackTrace();
             }
@@ -83,10 +82,9 @@ public class DeparturesArrivalsBenchmark implements IRailErrorResponseListener, 
         LinkedConnectionsApi api = new LinkedConnectionsApi(InstrumentationRegistry.getTargetContext());
         //api.setCacheEnabled(false);
 
-        IrailStationProvider stationProvider = new StationsDb(InstrumentationRegistry.getTargetContext());
 
-        for (int i = 0; i < stations.size(); i += 20) {
-            String station = stations.get(i);
+        for (int i = 0; i < requests.size(); i += 20) {
+            IrailRoutesRequest request = requests.get(i);
             while (!free) {
                 try {
                     Thread.sleep(500);
@@ -95,7 +93,7 @@ public class DeparturesArrivalsBenchmark implements IRailErrorResponseListener, 
                 }
             }
 
-            Log.d("BENCHMARK", i + "/" + stations.size());
+            Log.d("BENCHMARK", i + "/" + requests.size());
             free = false;
 
             if (i > 0 && i % 100 == 0) {
@@ -115,11 +113,10 @@ public class DeparturesArrivalsBenchmark implements IRailErrorResponseListener, 
                 Log.e("BENCHMARK", "min " + min + " avg " + avg + " max " + max);
             }
 
-            IrailLiveboardRequest r = new IrailLiveboardRequest(stationProvider.getStationByUri(station), RouteTimeDefinition.DEPART_AT, Liveboard.LiveboardType.DEPARTURES, queryDates.get(i));
-            start.put(station, DateTime.now().getMillis());
-            r.setCallback(DeparturesArrivalsBenchmark.this, DeparturesArrivalsBenchmark.this, station);
+            start.put(request.toString(), DateTime.now().getMillis());
+            request.setCallback(ConnectionsBenchmark.this, ConnectionsBenchmark.this, request.toString());
 
-            api.getLiveboard(r);
+            api.getRoutes(request);
         }
 
         long min = 5000, max = 0, avg = 0;
@@ -148,7 +145,7 @@ public class DeparturesArrivalsBenchmark implements IRailErrorResponseListener, 
     }
 
     @Override
-    public void onSuccessResponse(@NonNull Liveboard data, Object tag) {
+    public void onSuccessResponse(@NonNull RouteResult data, Object tag) {
         end.put((String) tag, DateTime.now().getMillis());
         done.add((String) tag);
         Duration d = new Duration(start.get(tag), end.get(tag));

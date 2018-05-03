@@ -50,8 +50,8 @@ public class TrainIndexBenchmark implements IRailErrorResponseListener, IRailSuc
 
         start = new HashMap<>();
         end = new HashMap<>();
-        IrailDataProvider api = new LinkedConnectionsApi(InstrumentationRegistry.getTargetContext());
-        //api.setCacheEnabled(false);
+        LinkedConnectionsApi api = new LinkedConnectionsApi(InstrumentationRegistry.getTargetContext());
+       // api.setCacheEnabled(false);
 
         for (int i = 0; i < trains.length; i += 20) {
             String train = trains[i];
