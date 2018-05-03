@@ -5,8 +5,10 @@ import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.AsyncTask;
 import android.support.annotation.NonNull;
+import android.util.Log;
 
 import org.joda.time.DateTime;
+import org.joda.time.format.ISODateTimeFormat;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -215,6 +217,10 @@ public class LinkedConnectionsApi implements IrailDataProvider, MeteredApi {
         return mMeteredRequests.toArray(meteredRequests);
     }
 
+    public void setCacheEnabled(boolean enabled) {
+        mLinkedConnectionsProvider.setCacheEnabled(enabled);
+    }
+
     private boolean isInternetAvailable() {
         NetworkInfo activeNetwork = mConnectivityManager.getActiveNetworkInfo();
         return activeNetwork != null &&
@@ -229,6 +235,9 @@ public class LinkedConnectionsApi implements IrailDataProvider, MeteredApi {
         StartVehicleRequestTask(LinkedConnectionsApi api) {
             mApi = new WeakReference<>(api);
         }
+
+
+        ArrayList<String> trainDeparturesIndex;
 
         @Override
         protected Void doInBackground(IrailVehicleRequest... requests) {
@@ -247,15 +256,18 @@ public class LinkedConnectionsApi implements IrailDataProvider, MeteredApi {
             VehicleResponseListener listener = new VehicleResponseListener(request, api.mStationsProvider);
             VehicleQueryResponseListener query = new VehicleQueryResponseListener("http://irail.be/vehicle/" + request.getVehicleId(), listener, listener, meteredRequest);
 
-            ArrayList<String> departures = new ArrayList<>();
-            try (InputStream in = api.mContext.getResources().openRawResource(R.raw.firstdepartures)) {
-                java.util.Scanner s = new java.util.Scanner(in).useDelimiter("\\A");
-                while (s.hasNextLine()) departures.add(s.nextLine());
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
             DateTime departureTime = request.getSearchTime().withTimeAtStartOfDay().withHourOfDay(3);
-            for (String departure : departures) {
+            if (trainDeparturesIndex == null) {
+                trainDeparturesIndex = new ArrayList<>();
+                try (InputStream in = api.mContext.getResources().openRawResource(R.raw.firstdepartures)) {
+                    java.util.Scanner s = new java.util.Scanner(in).useDelimiter("\\A");
+                    while (s.hasNextLine()) trainDeparturesIndex.add(s.nextLine());
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+
+            for (String departure : trainDeparturesIndex) {
                 if (departure.split(" ")[0].equals(request.getVehicleId())) {
                     departureTime = request.getSearchTime().withTimeAtStartOfDay()
                             .withHourOfDay(Integer.valueOf(departure.split(" ")[1]))
@@ -263,6 +275,8 @@ public class LinkedConnectionsApi implements IrailDataProvider, MeteredApi {
                     break;
                 }
             }
+
+            Log.d("LinkedConnectionsApi", "Departure time from index for " + request.getVehicleId() + " is " + departureTime.toString(ISODateTimeFormat.basicDateTimeNoMillis()));
 
             api.mLinkedConnectionsProvider.queryLinkedConnections(departureTime, query, meteredRequest);
             return null;

@@ -1,7 +1,11 @@
 package be.bertmarcelis.thesis.irail.implementation.linkedconnections;
 
-import org.joda.time.DateTime;
+import com.google.firebase.perf.metrics.AddTrace;
 
+import org.joda.time.DateTime;
+import org.joda.time.Duration;
+
+import java.io.FileNotFoundException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -22,6 +26,7 @@ public class VehicleQueryResponseListener implements QueryResponseListener.Linke
     private List<LinkedConnection> result = new ArrayList<>();
     private String previous, current;
 
+    private DateTime started;
     private DateTime lastSpotted;
 
     public VehicleQueryResponseListener(String vehicleUri, final IRailSuccessResponseListener<LinkedConnections> successListener, final IRailErrorResponseListener errorListener, Object tag) {
@@ -32,6 +37,7 @@ public class VehicleQueryResponseListener implements QueryResponseListener.Linke
     }
 
     @Override
+    @AddTrace(name="vehicleQuery.result")
     public int onQueryResult(LinkedConnections data) {
         if (current == null) {
             previous = data.previous;
@@ -40,6 +46,15 @@ public class VehicleQueryResponseListener implements QueryResponseListener.Linke
 
         if (data.connections.length < 1) {
             return 1;
+        }
+
+        if (started == null){
+            started = data.connections[0].getDepartureTime();
+        } else {
+            if (new Duration(started,data.connections[0].getDepartureTime()).getStandardHours() > 24){
+                mErrorListener.onErrorResponse(new FileNotFoundException(),mTag);
+                return 0;
+            }
         }
 
         DateTime lastDepartureTime = null;

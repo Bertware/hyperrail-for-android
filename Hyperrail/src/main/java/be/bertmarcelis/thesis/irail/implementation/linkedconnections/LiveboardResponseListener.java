@@ -3,6 +3,8 @@ package be.bertmarcelis.thesis.irail.implementation.linkedconnections;
 import android.support.annotation.NonNull;
 import android.util.Log;
 
+import com.google.firebase.perf.metrics.AddTrace;
+
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
 
@@ -56,6 +58,7 @@ public class LiveboardResponseListener implements IRailSuccessResponseListener<L
     }
 
     @Override
+    @AddTrace(name = "LiveboardResponseListener.onSuccess")
     public void onSuccessResponse(@NonNull LinkedConnections data, Object tag) {
 
         ((MeteredRequest) tag).setMsecUsableNetworkResponse(DateTime.now().getMillis());
@@ -116,6 +119,7 @@ public class LiveboardResponseListener implements IRailSuccessResponseListener<L
         ((MeteredApi.MeteredRequest) tag).setResponseType(MeteredApi.RESPONSE_FAILED);
     }
 
+    @AddTrace(name = "LiveboardResponseListener.createStopArray")
     private VehicleStop[] generateStopArray() {
         // Find stops (train arrives and leaves again)
         ArrayList<LinkedConnection> handledConnections = new ArrayList<>();

@@ -17,6 +17,9 @@ import com.android.volley.toolbox.BasicNetwork;
 import com.android.volley.toolbox.DiskBasedCache;
 import com.android.volley.toolbox.HurlStack;
 import com.android.volley.toolbox.JsonObjectRequest;
+import com.google.firebase.analytics.FirebaseAnalytics;
+import com.google.firebase.perf.FirebasePerformance;
+import com.google.firebase.perf.metrics.Trace;
 
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
@@ -50,6 +53,10 @@ import static be.bertmarcelis.thesis.irail.contracts.MeteredApi.RESPONSE_ONLINE;
 
 public class LinkedConnectionsProvider {
 
+    private static final String GTFS_REGULAR = "gtfs:Regular";
+    private static final String GTFS_DROP_OFF_TYPE = "gtfs:dropOffType";
+    private static final String GTFS_PICKUP_TYPE = "gtfs:pickupType";
+    public static final String BASE_URL = "https://graph.irail.be/sncb/connections?departureTime=";
     private final LinkedConnectionsOfflineCache mLinkedConnectionsOfflineCache;
     private final RequestQueue requestQueue;
     private final RetryPolicy requestPolicy;
@@ -93,7 +100,7 @@ public class LinkedConnectionsProvider {
 
     @NonNull
     public String getLinkedConnectionsUrl(DateTime timestamp) {
-        return "https://graph.irail.be/sncb/connections?departureTime=" +
+        return BASE_URL +
                 timestamp.withZone(DateTimeZone.UTC).toString(ISODateTimeFormat.dateTime());
     }
 
@@ -125,6 +132,9 @@ public class LinkedConnectionsProvider {
         }
         // TODO: prevent loading the same URL twice when two requests are made short after each other (locking based on URL)
 
+        final Trace tracing = FirebasePerformance.getInstance().newTrace("LinkedConnectionsProvider.getByUrl");
+        tracing.start();
+
         Response.Listener<JSONObject> volleySuccessListener = new Response.Listener<JSONObject>() {
             @Override
             public void onResponse(JSONObject response) {
@@ -134,11 +144,14 @@ public class LinkedConnectionsProvider {
                 try {
                     LinkedConnections result = getLinkedConnectionsFromJson(response);
                     mLinkedConnectionsOfflineCache.store(result, response.toString());
+                    tracing.stop();
                     successListener.onSuccessResponse(result, tag);
                 } catch (JSONException e) {
                     e.printStackTrace();
+                    tracing.stop();
                     errorListener.onErrorResponse(e, tag);
                 }
+
 
             }
         };
@@ -154,6 +167,7 @@ public class LinkedConnectionsProvider {
                     if (BuildConfig.DEBUG) {
                         Log.w("LCProvider", "Getting LC page " + url + " failed: offline cache missed!");
                     }
+                    tracing.stop();
                     errorListener.onErrorResponse(error, tag);
                 } else {
                     try {
@@ -164,6 +178,7 @@ public class LinkedConnectionsProvider {
                         successListener.onSuccessResponse(result, tag);
                     } catch (JSONException e) {
                         e.printStackTrace();
+                        tracing.stop();
                         errorListener.onErrorResponse(error, tag);
                     }
                 }
@@ -180,9 +195,11 @@ public class LinkedConnectionsProvider {
                 return headers;
             }
         };
-
-        LinkedConnectionsOfflineCache.CachedLinkedConnections cache = mLinkedConnectionsOfflineCache.load(url);
-        if (cache != null && cache.createdAt.isAfter(DateTime.now().minusSeconds(60))) {
+        LinkedConnectionsOfflineCache.CachedLinkedConnections cache = null;
+        if (mCacheEnabled) {
+            cache = mLinkedConnectionsOfflineCache.load(url);
+        }
+        if (cache != null && mCacheEnabled && cache.createdAt.isAfter(DateTime.now().minusSeconds(60))) {
             try {
                 ((MeteredApi.MeteredRequest) tag).setResponseType(RESPONSE_CACHED);
                 if (BuildConfig.DEBUG) {
@@ -192,6 +209,7 @@ public class LinkedConnectionsProvider {
                 return;
             } catch (JSONException e) {
                 e.printStackTrace();
+                tracing.stop();
             }
         } else {
             if (cache == null) {
@@ -232,36 +250,14 @@ public class LinkedConnectionsProvider {
             JSONObject entry = array.getJSONObject(
                     i);
 
-            if (!entry.has("gtfs:dropOffType") ||
-                    !entry.has("gtfs:pickupType") ||
-                    !Objects.equals(entry.getString("gtfs:dropOffType"), "gtfs:Regular") ||
-                    !Objects.equals(entry.getString("gtfs:pickupType"), "gtfs:Regular")) {
+            if (!entry.has(GTFS_DROP_OFF_TYPE) ||
+                    !entry.has(GTFS_PICKUP_TYPE) ||
+                    !Objects.equals(entry.getString(GTFS_DROP_OFF_TYPE), GTFS_REGULAR) ||
+                    !Objects.equals(entry.getString(GTFS_PICKUP_TYPE), GTFS_REGULAR)) {
                 continue;
             }
 
-            LinkedConnection connection = new LinkedConnection();
-
-            connection.setUri(entry.getString("@id"));
-
-            connection.setDepartureStationUri(entry.getString("departureStop"));
-            connection.setDepartureTime(DateTime.parse(entry.getString("departureTime")).withZone(DateTimeZone.forID("Europe/Brussels")));
-            connection.setDepartureDelay(0);
-            if (entry.has("departureDelay")) {
-                connection.setDepartureDelay(entry.getInt("departureDelay"));
-            }
-
-            connection.setArrivalStationUri(entry.getString("arrivalStop"));
-            connection.setArrivalTime(DateTime.parse(entry.getString("arrivalTime")).withZone(DateTimeZone.forID("Europe/Brussels")));
-
-            connection.setArrivalDelay(0);
-            if (entry.has("arrivalDelay")) {
-                connection.setArrivalDelay(entry.getInt("arrivalDelay"));
-            }
-
-            connection.setDirection(entry.getString("direction"));
-            connection.setRoute(entry.getString("gtfs:route"));
-            connection.setTrip(entry.getString("gtfs:trip"));
-
+            LinkedConnection connection = new LinkedConnection(entry);
             connections.add(connection);
         }
 

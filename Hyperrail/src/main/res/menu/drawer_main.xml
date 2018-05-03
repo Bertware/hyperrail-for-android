@@ -33,17 +33,17 @@
                 <item
                     android:id="@+id/action_test1"
                     android:icon="@drawable/ic_info_outline"
-                    android:title="Test version 1"
+                    android:title="@string/test_version_1"
                     app:showAsAction="ifRoom|collapseActionView" />
                 <item
                     android:id="@+id/action_test2"
                     android:icon="@drawable/ic_info_outline"
-                    android:title="Test version 2"
+                    android:title="@string/test_version_2"
                     app:showAsAction="ifRoom|collapseActionView" />
                 <item
                     android:id="@+id/action_store"
                     android:icon="@drawable/ic_info_outline"
-                    android:title="Store test results"
+                    android:title="@string/store_test_results"
                     app:showAsAction="ifRoom|collapseActionView" />
             </menu>
         </item>

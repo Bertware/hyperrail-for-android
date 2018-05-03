@@ -6,6 +6,8 @@ import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 
+import com.google.firebase.perf.metrics.AddTrace;
+
 import org.joda.time.DateTime;
 
 /**
@@ -54,6 +56,7 @@ public class LinkedConnectionsOfflineCache extends SQLiteOpenHelper {
         int id = (int) db.insertWithOnConflict(TABLE, null, values, SQLiteDatabase.CONFLICT_REPLACE);
     }
 
+    @AddTrace(name = "LinkedConnectionsOfflineCache.load")
     public CachedLinkedConnections load(String url) {
         SQLiteDatabase db = getReadableDatabase();
         Cursor c = db.query(TABLE, new String[]{"url", "data", "datetime"}, "url=?", new String[]{url}, null, null, null);
@@ -72,6 +75,7 @@ public class LinkedConnectionsOfflineCache extends SQLiteOpenHelper {
         return result;
     }
 
+    @AddTrace(name = "LinkedConnectionsOfflineCache.loadApproximate")
     private CachedLinkedConnections loadApproximate(String url) {
         SQLiteDatabase db = getReadableDatabase();
         Cursor c = db.query(TABLE, new String[]{"url", "data", "datetime"}, "url<=? AND next>?", new String[]{url,url}, null, null, "url DESC");

@@ -200,7 +200,7 @@ public class RoutesFragment extends RecyclerViewFragment<RouteResult> implements
                                 public void run() {
                                     // data consists of both old and new routes
 
-                                    if (data == null || data.getRoutes() == null) {
+                                    if (data == null || mCurrentRouteResult == null || mCurrentRouteResult.getRoutes() == null || data.getRoutes() == null) {
                                         return;
                                     }
 

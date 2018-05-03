@@ -17,6 +17,8 @@ import com.android.volley.toolbox.DiskBasedCache;
 import com.android.volley.toolbox.HurlStack;
 import com.android.volley.toolbox.JsonObjectRequest;
 import com.google.firebase.crash.FirebaseCrash;
+import com.google.firebase.perf.FirebasePerformance;
+import com.google.firebase.perf.metrics.Trace;
 
 import org.joda.time.DateTime;
 import org.joda.time.format.DateTimeFormat;
@@ -107,6 +109,9 @@ public class Lc2IrailApi implements IrailDataProvider, MeteredApi {
         final MeteredRequest mMeteredRequest = new MeteredRequest();
         mMeteredRequest.setMsecStart(DateTime.now().getMillis());
 
+        final Trace tracing = FirebasePerformance.getInstance().newTrace("lc2irail.getLiveboard");
+        tracing.start();
+
         DateTimeFormatter fmt = ISODateTimeFormat.dateTimeNoMillis();
         String url;
         // https://lc2irail.thesis.bertmarcelis.be/liveboard/008841004/after/2018-04-13T13:13:47+00:00
@@ -129,10 +134,12 @@ public class Lc2IrailApi implements IrailDataProvider, MeteredApi {
                 Liveboard liveboard;
                 try {
                     liveboard = parser.parseLiveboard(request, response);
+                    tracing.stop();
                 } catch (Exception e) {
                     FirebaseCrash.logcat(
                             WARNING.intValue(), "Failed to parse liveboard", e.getMessage());
                     Log.w(LOGTAG, "Failed to parse liveboard", e);
+                    tracing.stop();
                     FirebaseCrash.report(e);
                     request.notifyErrorListeners(e);
                     return;
@@ -147,6 +154,7 @@ public class Lc2IrailApi implements IrailDataProvider, MeteredApi {
         Response.ErrorListener errorListener = new Response.ErrorListener() {
             @Override
             public void onErrorResponse(VolleyError e) {
+                tracing.stop();
                 FirebaseCrash.logcat(
                         WARNING.intValue(), "Failed to get liveboard", e.getMessage());
                 request.notifyErrorListeners(e);
@@ -176,7 +184,8 @@ public class Lc2IrailApi implements IrailDataProvider, MeteredApi {
     public void getRoutes(@NonNull final IrailRoutesRequest request) {
         final MeteredRequest mMeteredRequest = new MeteredRequest();
         mMeteredRequest.setMsecStart(DateTime.now().getMillis());
-
+        final Trace tracing = FirebasePerformance.getInstance().newTrace("lc2irail.getRoutes");
+        tracing.start();
         // https://api.irail.be/connections/?to=Halle&from=Brussels-south&date={dmy}&time=2359&timeSel=arrive or depart&format=json
         DateTimeFormatter fmt = ISODateTimeFormat.dateTimeNoMillis();
 
@@ -207,6 +216,7 @@ public class Lc2IrailApi implements IrailDataProvider, MeteredApi {
                     request.notifyErrorListeners(e);
                     return;
                 }
+                tracing.stop();
                 request.notifySuccessListeners(routeResult);
                 mMeteredRequest.setMsecParsed(DateTime.now().getMillis());
                 mMeteredRequests.add(mMeteredRequest);
@@ -218,6 +228,7 @@ public class Lc2IrailApi implements IrailDataProvider, MeteredApi {
             public void onErrorResponse(VolleyError e) {
                 FirebaseCrash.logcat(
                         WARNING.intValue(), "Failed to get routes", e.getMessage());
+                tracing.stop();
                 request.notifyErrorListeners(e);
             }
         };
@@ -304,6 +315,9 @@ public class Lc2IrailApi implements IrailDataProvider, MeteredApi {
         mMeteredRequest.setMsecStart(DateTime.now().getMillis());
         DateTimeFormatter fmt = DateTimeFormat.forPattern("YYYYMMdd");
 
+        final Trace tracing = FirebasePerformance.getInstance().newTrace("lc2irail.getVehicle");
+        tracing.start();
+
         // https://lc2irail.thesis.bertmarcelis.be/vehicle/IC538/20180413
         String url = "https://lc2irail.thesis.bertmarcelis.be/vehicle/"
                 + request.getVehicleId() + "/"
@@ -324,6 +338,7 @@ public class Lc2IrailApi implements IrailDataProvider, MeteredApi {
                     request.notifyErrorListeners(e);
                     return;
                 }
+                tracing.stop();
                 request.notifySuccessListeners(vehicle);
 
                 mMeteredRequest.setMsecParsed(DateTime.now().getMillis());
@@ -336,6 +351,7 @@ public class Lc2IrailApi implements IrailDataProvider, MeteredApi {
             public void onErrorResponse(VolleyError e) {
                 FirebaseCrash.logcat(
                         WARNING.intValue(), "Failed to get vehicle", e.getMessage());
+                tracing.stop();
                 request.notifyErrorListeners(e);
             }
         };
@@ -399,7 +415,7 @@ public class Lc2IrailApi implements IrailDataProvider, MeteredApi {
             }
             requestQueue.add(jsObjRequest);
         } else {
-            Log.d(LOGTAG,"Trying to get data without internet");
+            Log.d(LOGTAG, "Trying to get data without internet");
             if (requestQueue.getCache().get(jsObjRequest.getCacheKey()) != null) {
                 try {
                     JSONObject cache;
@@ -414,7 +430,7 @@ public class Lc2IrailApi implements IrailDataProvider, MeteredApi {
                 }
 
             } else {
-                Log.d(LOGTAG,"No cache available");
+                Log.d(LOGTAG, "No cache available");
                 errorListener.onErrorResponse(new NoConnectionError());
                 meteredRequest.setResponseType(RESPONSE_FAILED);
             }

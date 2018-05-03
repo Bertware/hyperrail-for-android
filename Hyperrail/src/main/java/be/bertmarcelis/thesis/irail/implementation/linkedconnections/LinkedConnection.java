@@ -1,21 +1,34 @@
 package be.bertmarcelis.thesis.irail.implementation.linkedconnections;
 
 import org.joda.time.DateTime;
+import org.joda.time.DateTimeZone;
+import org.joda.time.format.DateTimeFormat;
+import org.joda.time.format.DateTimeFormatter;
+import org.joda.time.format.ISODateTimeFormat;
+import org.json.JSONException;
+import org.json.JSONObject;
 
 /**
  * Created in be.hyperrail.android.irail.implementation.linkedconnections on 15/03/2018.
  */
 class LinkedConnection {
+    public static final String TZ_BRUSSELS = "Europe/Brussels";
+    private final JSONObject mEntry;
     private String uri;
     private String departureStationUri;
     private String arrivalStationUri;
     private DateTime departureTime;
     private DateTime arrivalTime;
-    private int departureDelay;
-    private int arrivalDelay;
+    private int departureDelay = -1;
+    private int arrivalDelay = -1;
     private String direction;
     private String route;
     private String trip;
+    private static final DateTimeFormatter formatter = DateTimeFormat.forPattern("yyyy-MM-ddd'T'HH:mm:ss.SSSZ");
+
+    public LinkedConnection(JSONObject entry) {
+        mEntry = entry;
+    }
 
     DateTime getDelayedDepartureTime() {
         return getDepartureTime().plusSeconds(getDepartureDelay());
@@ -26,6 +39,13 @@ class LinkedConnection {
     }
 
     public String getUri() {
+        if (uri == null) {
+            try {
+                setUri(mEntry.getString("@id"));
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+        }
         return uri;
     }
 
@@ -34,6 +54,13 @@ class LinkedConnection {
     }
 
     public String getDepartureStationUri() {
+        if (departureStationUri == null) {
+            try {
+                setDepartureStationUri(mEntry.getString("departureStop"));
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+        }
         return departureStationUri;
     }
 
@@ -42,6 +69,13 @@ class LinkedConnection {
     }
 
     public String getArrivalStationUri() {
+        if (arrivalStationUri == null) {
+            try {
+                setArrivalStationUri(mEntry.getString("arrivalStop"));
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+        }
         return arrivalStationUri;
     }
 
@@ -50,6 +84,13 @@ class LinkedConnection {
     }
 
     public DateTime getDepartureTime() {
+        if (departureTime == null) {
+            try {
+                setDepartureTime(formatter.parseDateTime(mEntry.getString("departureTime")).withZone(DateTimeZone.forID(TZ_BRUSSELS)));
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+        }
         return departureTime;
     }
 
@@ -58,6 +99,13 @@ class LinkedConnection {
     }
 
     public DateTime getArrivalTime() {
+        if (arrivalTime == null) {
+            try {
+                setArrivalTime(formatter.parseDateTime(mEntry.getString("arrivalTime")).withZone(DateTimeZone.forID(TZ_BRUSSELS)));
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+        }
         return arrivalTime;
     }
 
@@ -66,6 +114,17 @@ class LinkedConnection {
     }
 
     public int getDepartureDelay() {
+        if (departureDelay == -1) {
+            setDepartureDelay(0);
+            if (mEntry.has("departureDelay")) {
+                try {
+                    setDepartureDelay(mEntry.getInt("departureDelay"));
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+
         return departureDelay;
     }
 
@@ -74,6 +133,17 @@ class LinkedConnection {
     }
 
     public int getArrivalDelay() {
+        if (arrivalDelay == -1) {
+            setArrivalDelay(0);
+            if (mEntry.has("arrivalDelay")) {
+                try {
+                    setArrivalDelay(mEntry.getInt("arrivalDelay"));
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+
         return arrivalDelay;
     }
 
@@ -82,6 +152,13 @@ class LinkedConnection {
     }
 
     public String getDirection() {
+        if (direction == null) {
+            try {
+                direction = mEntry.getString("direction");
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+        }
         return direction;
     }
 
@@ -90,6 +167,13 @@ class LinkedConnection {
     }
 
     public String getRoute() {
+        if (route == null) {
+            try {
+                route = mEntry.getString("gtfs:route");
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+        }
         return route;
     }
 
@@ -98,6 +182,13 @@ class LinkedConnection {
     }
 
     public String getTrip() {
+        if (trip == null) {
+            try {
+                trip = mEntry.getString("gtfs:trip");
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+        }
         return trip;
     }
 
@@ -105,4 +196,3 @@ class LinkedConnection {
         this.trip = trip;
     }
 }
-

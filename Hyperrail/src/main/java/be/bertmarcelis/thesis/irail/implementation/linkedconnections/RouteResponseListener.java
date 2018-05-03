@@ -4,6 +4,8 @@ import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.util.Log;
 
+import com.google.firebase.perf.metrics.AddTrace;
+
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
 
@@ -78,6 +80,7 @@ public class RouteResponseListener implements IRailSuccessResponseListener<Linke
 
     }
 
+    @AddTrace(name = "RouteResponseListener.process")
     private void process(LinkedConnections data) throws StationNotResolvedException {
         // Keep searching
         // - while no results have been found

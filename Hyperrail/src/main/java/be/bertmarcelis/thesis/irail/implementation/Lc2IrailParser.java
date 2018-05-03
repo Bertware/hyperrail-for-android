@@ -152,9 +152,15 @@ public class Lc2IrailParser {
 
         uri = json.getString("uri");
 
+        String headsign = json.getJSONObject("vehicle").getString("direction");
+        Station headsignStation = stationProvider.getStationByName(headsign);
+        if (headsignStation != null) {
+            headsign = headsignStation.getLocalizedName();
+        }
+
         vehicle = new VehicleStub(
                 json.getJSONObject("vehicle").getString("id"),
-                json.getJSONObject("vehicle").getString("direction"),
+                headsign,
                 json.getJSONObject("vehicle").getString("uri")
         );
 
@@ -167,7 +173,11 @@ public class Lc2IrailParser {
                 type = VehicleStopType.DEPARTURE;
             }
         } else {
-            type = VehicleStopType.ARRIVAL;
+            if (arrivalTime != null) {
+                type = VehicleStopType.ARRIVAL;
+            } else {
+                throw new IllegalStateException("Departure time or arrival time is required!");
+            }
         }
 
         boolean departureCanceled = false;
@@ -391,11 +401,19 @@ public class Lc2IrailParser {
          */
         JSONArray jsonlegs = json.getJSONArray("legs");
         RouteLeg[] legs = new RouteLeg[jsonlegs.length()];
+
         for (int i = 0; i < jsonlegs.length(); i++) {
             JSONObject jsonLeg = jsonlegs.getJSONObject(i);
+
+            String headsign = jsonLeg.getString("direction");
+            Station headsignStation = stationProvider.getStationByName(headsign);
+            if (headsignStation != null) {
+                headsign = headsignStation.getLocalizedName();
+            }
+
             VehicleStub vehicle = new VehicleStub(
                     jsonLeg.getString("route"),
-                    jsonLeg.getString("direction"),
+                    headsign,
                     jsonLeg.getString("trip")
             );
 
