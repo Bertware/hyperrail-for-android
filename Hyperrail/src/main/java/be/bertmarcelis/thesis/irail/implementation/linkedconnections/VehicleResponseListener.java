@@ -51,7 +51,7 @@ public class VehicleResponseListener implements IRailSuccessResponseListener<Lin
         LinkedConnection lastConnection = null;
         for (int i = 0; i < data.connections.length; i++) {
             LinkedConnection connection = data.connections[i];
-            if (!Objects.equals(connection.getRoute(), "http://irail.be/vehicle/" + mRequest.getVehicleId())) {
+            if (!connection.isNormal() ||  !Objects.equals(connection.getRoute(), "http://irail.be/vehicle/" + mRequest.getVehicleId())) {
                 continue;
             }
 

@@ -79,6 +79,10 @@ public class LiveboardResponseListener implements IRailSuccessResponseListener<L
         }
 
         for (LinkedConnection connection : data.connections) {
+            if (!connection.isNormal()){
+                continue;
+            }
+
             if (connection.getDepartureStationUri().equals(request.getStation().getUri())) {
                 departures.add(connection);
             }

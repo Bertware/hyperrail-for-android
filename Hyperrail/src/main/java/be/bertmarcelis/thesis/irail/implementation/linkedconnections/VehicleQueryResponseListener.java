@@ -59,6 +59,9 @@ public class VehicleQueryResponseListener implements QueryResponseListener.Linke
 
         DateTime lastDepartureTime = null;
         for (LinkedConnection connection : data.connections) {
+            if (!connection.isNormal()){
+                continue;
+            }
             if (Objects.equals(connection.getRoute(), mVehicleUri)) {
                 lastSpotted = connection.getArrivalTime();
                 result.add(connection);

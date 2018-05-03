@@ -41,7 +41,7 @@ class LinkedConnection {
     protected String trip;
     @JsonField(name = "gtfs:pickupType")
     protected String pickupType;
-    @JsonField(name = " gtfs:dropOffType")
+    @JsonField(name = "gtfs:dropOffType")
     protected String dropoffType;
 
 
@@ -100,6 +100,10 @@ class LinkedConnection {
 
     protected void setTrip(String trip) {
         this.trip = trip;
+    }
+
+    public boolean isNormal(){
+        return pickupType != null && dropoffType != null && pickupType.equals("gtfs:Regular") && dropoffType.equals("gtfs:Regular");
     }
 }
 

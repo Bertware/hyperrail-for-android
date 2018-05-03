@@ -109,8 +109,10 @@ public class RouteResponseListener implements IRailSuccessResponseListener<Linke
         boolean hasPassedDepartureLimit = false;
         for (int i = data.connections.length - 1; i >= 0; i--) {
             LinkedConnection connection = data.connections[i];
+            if (!connection.isNormal()){
+                continue;
+            }
 
-            // TODO: filter too late / too early
             if (mDepartureLimit != null && connection.getDepartureTime().isBefore(mDepartureLimit)) {
                 hasPassedDepartureLimit = true;
                 continue;
