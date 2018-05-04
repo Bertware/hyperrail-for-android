@@ -1,5 +1,7 @@
 package be.bertmarcelis.thesis.irail.implementation.linkedconnections;
 
+import com.google.firebase.perf.metrics.AddTrace;
+
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.format.DateTimeFormat;
@@ -38,6 +40,7 @@ class LinkedConnection {
         return getArrivalTime().plusSeconds(getArrivalDelay());
     }
 
+    @AddTrace(name="LinkedConnection.getUri")
     public String getUri() {
         if (uri == null) {
             try {
@@ -53,6 +56,7 @@ class LinkedConnection {
         this.uri = uri;
     }
 
+    @AddTrace(name="LinkedConnection.getDepartureStationUri")
     public String getDepartureStationUri() {
         if (departureStationUri == null) {
             try {
@@ -150,7 +154,7 @@ class LinkedConnection {
     protected void setArrivalDelay(int arrivalDelay) {
         this.arrivalDelay = arrivalDelay;
     }
-
+    @AddTrace(name="LinkedConnection.getDirection")
     public String getDirection() {
         if (direction == null) {
             try {
@@ -166,6 +170,7 @@ class LinkedConnection {
         this.direction = direction;
     }
 
+    @AddTrace(name="LinkedConnection.getRoute")
     public String getRoute() {
         if (route == null) {
             try {
@@ -180,7 +185,7 @@ class LinkedConnection {
     protected void setRoute(String route) {
         this.route = route;
     }
-
+    @AddTrace(name="LinkedConnection.getTrip")
     public String getTrip() {
         if (trip == null) {
             try {
