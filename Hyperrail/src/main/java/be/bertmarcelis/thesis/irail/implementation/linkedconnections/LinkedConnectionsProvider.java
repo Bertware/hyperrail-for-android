@@ -21,6 +21,7 @@ import com.android.volley.toolbox.StringRequest;
 import com.bluelinelabs.logansquare.LoganSquare;
 import com.google.firebase.analytics.FirebaseAnalytics;
 import com.google.firebase.perf.FirebasePerformance;
+import com.google.firebase.perf.metrics.AddTrace;
 import com.google.firebase.perf.metrics.Trace;
 
 import org.joda.time.DateTime;
@@ -239,6 +240,7 @@ public class LinkedConnectionsProvider {
     }
 
     @NonNull
+    @AddTrace(name="LinkedConnectionsProvider.fromJsonLS")
     private LinkedConnections getLinkedConnectionsFromJson(String response) throws
             JSONException, IOException {
        /* LinkedConnections result = new LinkedConnections();
