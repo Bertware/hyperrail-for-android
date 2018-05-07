@@ -1,22 +1,20 @@
 package be.bertmarcelis.thesis.irail.implementation.linkedconnections;
 
-import com.bluelinelabs.logansquare.annotation.JsonField;
-import com.bluelinelabs.logansquare.annotation.JsonObject;
-
-import be.bertmarcelis.thesis.irail.implementation.LinkedConnectionsApi;
+import com.dslplatform.json.CompiledJson;
+import com.dslplatform.json.JsonAttribute;
 
 /**
  * Created in be.hyperrail.android.irail.implementation.linkedconnections on 15/03/2018.
  */
 
-@JsonObject
+@CompiledJson(onUnknown = CompiledJson.Behavior.IGNORE)
 public class LinkedConnections {
-    @JsonField(name = "@id")
+    @JsonAttribute(name = "@id")
     String current;
-    @JsonField(name = "hydra:previous")
+    @JsonAttribute(name = "hydra:previous")
     String previous;
-    @JsonField(name = "hydra:next")
+    @JsonAttribute(name =  "hydra:next")
     String next;
-    @JsonField(name = "@graph")
+    @JsonAttribute(name = "@graph")
     LinkedConnection[] connections;
 }

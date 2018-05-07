@@ -1,49 +1,45 @@
 package be.bertmarcelis.thesis.irail.implementation.linkedconnections;
 
-import com.bluelinelabs.logansquare.annotation.JsonField;
-import com.bluelinelabs.logansquare.annotation.JsonObject;
-import com.bluelinelabs.logansquare.typeconverters.TypeConverter;
-import com.fasterxml.jackson.core.JsonGenerator;
-import com.fasterxml.jackson.core.JsonParser;
+import com.dslplatform.json.CompiledJson;
+import com.dslplatform.json.JsonAttribute;
 
 import org.joda.time.DateTime;
-import org.joda.time.DateTimeZone;
-import org.joda.time.format.DateTimeFormat;
-import org.joda.time.format.DateTimeFormatter;
-
-import java.io.IOException;
 
 /**
  * Created in be.hyperrail.android.irail.implementation.linkedconnections on 15/03/2018.
  */
-@JsonObject
-class LinkedConnection {
+@CompiledJson(onUnknown = CompiledJson.Behavior.IGNORE)
+public class LinkedConnection {
 
-    @JsonField(name = "@id")
+    @JsonAttribute(name = "@id")
     protected String uri;
-    @JsonField(name = "departureStop")
+    @JsonAttribute(name = "departureStop")
     protected String departureStationUri;
-    @JsonField(name = "arrivalStop")
+    @JsonAttribute(name = "arrivalStop")
     protected String arrivalStationUri;
-    @JsonField(name = "departureTime", typeConverter = DateTimeConverter.class)
+    @JsonAttribute(name = "departureTime")
     protected DateTime departureTime;
-    @JsonField(name = "arrivalTime", typeConverter = DateTimeConverter.class)
+    @JsonAttribute(name = "arrivalTime")
     protected DateTime arrivalTime;
-    @JsonField(name = "departureDelay")
+    @JsonAttribute(name = "departureDelay")
     protected int departureDelay = 0;
-    @JsonField(name = "arrivalDelay")
+    @JsonAttribute(name = "arrivalDelay")
     protected int arrivalDelay = 0;
-    @JsonField(name = "direction")
+    @JsonAttribute(name = "direction")
     protected String direction;
-    @JsonField(name = "gtfs:route")
+    @JsonAttribute(name = "gtfs:route")
     protected String route;
-    @JsonField(name = "gtfs:trip")
+    @JsonAttribute(name = "gtfs:trip")
     protected String trip;
-    @JsonField(name = "gtfs:pickupType")
+    @JsonAttribute(name = "gtfs:pickupType")
     protected String pickupType;
-    @JsonField(name = "gtfs:dropOffType")
+    @JsonAttribute(name = "gtfs:dropOffType")
     protected String dropoffType;
 
+    @CompiledJson(formats = {CompiledJson.Format.ARRAY, CompiledJson.Format.OBJECT})
+    public LinkedConnection() {
+
+    }
 
     DateTime getDelayedDepartureTime() {
         return getDepartureTime().plusSeconds(getDepartureDelay());

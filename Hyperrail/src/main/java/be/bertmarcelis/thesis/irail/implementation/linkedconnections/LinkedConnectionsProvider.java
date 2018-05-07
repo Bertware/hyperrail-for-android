@@ -16,10 +16,9 @@ import com.android.volley.VolleyError;
 import com.android.volley.toolbox.BasicNetwork;
 import com.android.volley.toolbox.DiskBasedCache;
 import com.android.volley.toolbox.HurlStack;
-import com.android.volley.toolbox.JsonObjectRequest;
 import com.android.volley.toolbox.StringRequest;
-import com.bluelinelabs.logansquare.LoganSquare;
-import com.google.firebase.analytics.FirebaseAnalytics;
+import com.dslplatform.json.DslJson;
+import com.dslplatform.json.runtime.Settings;
 import com.google.firebase.perf.FirebasePerformance;
 import com.google.firebase.perf.metrics.AddTrace;
 import com.google.firebase.perf.metrics.Trace;
@@ -28,19 +27,12 @@ import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Duration;
 import org.joda.time.format.ISODateTimeFormat;
-import org.json.JSONArray;
 import org.json.JSONException;
-import org.json.JSONObject;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Comparator;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 
 import be.bertmarcelis.thesis.BuildConfig;
 import be.bertmarcelis.thesis.irail.contracts.IRailErrorResponseListener;
@@ -65,7 +57,7 @@ public class LinkedConnectionsProvider {
     private final RequestQueue requestQueue;
     private final RetryPolicy requestPolicy;
     private final ConnectivityManager mConnectivityManager;
-
+    private static final DslJson<Object> dslJson = new DslJson<>(Settings.withRuntime().allowArrayFormat(true).includeServiceLoader());
     private boolean mCacheEnabled = true;
 
     private static final String UA = "HyperRail for Android - " + BuildConfig.VERSION_NAME;
@@ -269,7 +261,8 @@ public class LinkedConnectionsProvider {
         result.connections = new LinkedConnection[connections.size()];
         result.connections = connections.toArray(result.connections);
         */
-        return LoganSquare.parse(response,LinkedConnections.class);
+        byte[] bytes = response.getBytes();
+        return dslJson.deserialize(LinkedConnections.class, bytes, bytes.length);
        /* Arrays.sort(result.connections, new Comparator<LinkedConnection>() {
             @Override
             public int compare(LinkedConnection o1, LinkedConnection o2) {
