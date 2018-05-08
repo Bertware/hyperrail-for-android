@@ -19,10 +19,12 @@ import java.util.HashMap;
 
 import be.bertmarcelis.thesis.irail.contracts.IRailErrorResponseListener;
 import be.bertmarcelis.thesis.irail.contracts.IRailSuccessResponseListener;
+import be.bertmarcelis.thesis.irail.contracts.IrailDataProvider;
 import be.bertmarcelis.thesis.irail.contracts.IrailStationProvider;
 import be.bertmarcelis.thesis.irail.contracts.RouteTimeDefinition;
 import be.bertmarcelis.thesis.irail.contracts.StationNotResolvedException;
 import be.bertmarcelis.thesis.irail.db.StationsDb;
+import be.bertmarcelis.thesis.irail.implementation.Lc2IrailApi;
 import be.bertmarcelis.thesis.irail.implementation.LinkedConnectionsApi;
 import be.bertmarcelis.thesis.irail.implementation.Liveboard;
 import be.bertmarcelis.thesis.irail.implementation.RouteResult;
@@ -141,7 +143,7 @@ public class ConnectionsBenchmark implements IRailErrorResponseListener, IRailSu
         Duration d = new Duration(start.get(tag), end.get(tag));
         long ms = d.getMillis();
         free = true;
-        Log.d("BENCHMARK", "ready after " + ms + "ms");
+        Log.d("BENCHMARK", "erored after " + ms + "ms");
     }
 
     @Override

@@ -80,7 +80,7 @@ public class DeparturesArrivalsBenchmark implements IRailErrorResponseListener, 
 
         start = new HashMap<>();
         end = new HashMap<>();
-        LinkedConnectionsApi api = new LinkedConnectionsApi(InstrumentationRegistry.getTargetContext());
+        IrailDataProvider api = new Lc2IrailApi(InstrumentationRegistry.getTargetContext());
         //api.setCacheEnabled(false);
 
         IrailStationProvider stationProvider = new StationsDb(InstrumentationRegistry.getTargetContext());
