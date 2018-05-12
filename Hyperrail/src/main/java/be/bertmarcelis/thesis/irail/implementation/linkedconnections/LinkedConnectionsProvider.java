@@ -16,10 +16,8 @@ import com.android.volley.VolleyError;
 import com.android.volley.toolbox.BasicNetwork;
 import com.android.volley.toolbox.DiskBasedCache;
 import com.android.volley.toolbox.HurlStack;
-import com.android.volley.toolbox.JsonObjectRequest;
 import com.android.volley.toolbox.StringRequest;
 import com.bluelinelabs.logansquare.LoganSquare;
-import com.google.firebase.analytics.FirebaseAnalytics;
 import com.google.firebase.perf.FirebasePerformance;
 import com.google.firebase.perf.metrics.AddTrace;
 import com.google.firebase.perf.metrics.Trace;
@@ -28,19 +26,12 @@ import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Duration;
 import org.joda.time.format.ISODateTimeFormat;
-import org.json.JSONArray;
 import org.json.JSONException;
-import org.json.JSONObject;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Comparator;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 
 import be.bertmarcelis.thesis.BuildConfig;
 import be.bertmarcelis.thesis.irail.contracts.IRailErrorResponseListener;
@@ -119,8 +110,13 @@ public class LinkedConnectionsProvider {
     }
 
     public void getLinkedConnectionsByDateForTimeSpan(DateTime startTime, final DateTime endTime, final IRailSuccessResponseListener<LinkedConnections> successListener, final IRailErrorResponseListener errorListener, Object tag) {
-        TimespanQueryResponseListener listener = new TimespanQueryResponseListener(endTime, successListener, errorListener, tag);
+        TimespanQueryResponseListener listener = new TimespanQueryResponseListener(endTime, TimespanQueryResponseListener.DIRECTION_FORWARD, successListener, errorListener, tag);
         queryLinkedConnections(startTime, listener, tag);
+    }
+
+    public void getLinkedConnectionsByUrlForTimeSpanBackwards(String startUrl, final DateTime endTime, final IRailSuccessResponseListener<LinkedConnections> successListener, final IRailErrorResponseListener errorListener, Object tag) {
+        TimespanQueryResponseListener listener = new TimespanQueryResponseListener(endTime, TimespanQueryResponseListener.DIRECTION_BACKWARD, successListener, errorListener, tag);
+        queryLinkedConnections(startUrl, listener, tag);
     }
 
     public void getLinkedConnectionsByUrlSpan(String start, final String end, final IRailSuccessResponseListener<LinkedConnections> successListener, final IRailErrorResponseListener errorListener, Object tag) {

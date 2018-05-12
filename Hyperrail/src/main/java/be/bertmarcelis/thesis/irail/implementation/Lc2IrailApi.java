@@ -124,7 +124,7 @@ public class Lc2IrailApi implements IrailDataProvider, MeteredApi {
                     + request.getStation().getHafasId() + "/after/"
                     + fmt.print(request.getSearchTime());
         }
-
+        Log.d(LOGTAG, "Loading " + url);
         mMeteredRequest.setTag(request.toString());
 
         Response.Listener<JSONObject> successListener = new Response.Listener<JSONObject>() {
@@ -168,7 +168,7 @@ public class Lc2IrailApi implements IrailDataProvider, MeteredApi {
     public void extendLiveboard(@NonNull ExtendLiveboardRequest... requests) {
         for (ExtendLiveboardRequest request :
                 requests) {
-            LiveboardAppendHelper helper = new LiveboardAppendHelper();
+            LiveboardAppendHelper helper = new LiveboardAppendHelper(this);
             helper.extendLiveboard(request);
         }
     }
@@ -240,7 +240,7 @@ public class Lc2IrailApi implements IrailDataProvider, MeteredApi {
     public void extendRoutes(@NonNull ExtendRoutesRequest... requests) {
         for (ExtendRoutesRequest request :
                 requests) {
-            RouteAppendHelper helper = new RouteAppendHelper();
+            RouteAppendHelper helper = new RouteAppendHelper(this);
             helper.extendRoutesRequest(request);
         }
     }

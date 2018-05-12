@@ -80,7 +80,7 @@ public class DeparturesArrivalsBenchmark implements IRailErrorResponseListener, 
 
         start = new HashMap<>();
         end = new HashMap<>();
-        IrailDataProvider api = new Lc2IrailApi(InstrumentationRegistry.getTargetContext());
+        IrailDataProvider api = new LinkedConnectionsApi(InstrumentationRegistry.getTargetContext());
         //api.setCacheEnabled(false);
 
         IrailStationProvider stationProvider = new StationsDb(InstrumentationRegistry.getTargetContext());
@@ -116,8 +116,8 @@ public class DeparturesArrivalsBenchmark implements IRailErrorResponseListener, 
             }
 
             IrailLiveboardRequest r = new IrailLiveboardRequest(stationProvider.getStationByUri(station), RouteTimeDefinition.DEPART_AT, Liveboard.LiveboardType.DEPARTURES, queryDates.get(i));
-            start.put(station, DateTime.now().getMillis());
-            r.setCallback(DeparturesArrivalsBenchmark.this, DeparturesArrivalsBenchmark.this, station);
+            start.put(r.toString(), DateTime.now().getMillis());
+            r.setCallback(DeparturesArrivalsBenchmark.this, DeparturesArrivalsBenchmark.this, r.toString());
 
             api.getLiveboard(r);
         }

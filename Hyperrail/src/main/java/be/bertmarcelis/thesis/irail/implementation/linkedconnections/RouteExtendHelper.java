@@ -50,7 +50,7 @@ public class RouteExtendHelper implements IRailSuccessResponseListener<RouteResu
         }
 
         mRoutes = routes;
-        String start = null, stop = null;
+        String start, stop = null;
         DateTime departureLimit;
         if (mRequest.getRoutes().getTimeDefinition() == RouteTimeDefinition.DEPART_AT) {
             departureLimit = mRequest.getRoutes().getSearchTime();
@@ -86,7 +86,13 @@ public class RouteExtendHelper implements IRailSuccessResponseListener<RouteResu
         }
 
         if (mRequest.getRoutes().getTimeDefinition() == RouteTimeDefinition.DEPART_AT) {
-            mLinkedConnectionsProvider.getLinkedConnectionsByUrlSpan(start, stop,
+            DateTime limit;
+            if (mRoutes.getRoutes() != null && mRoutes.getRoutes().length > 0){
+                limit = mRoutes.getRoutes()[mRoutes.getRoutes().length - 1].getDepartureTime();
+            } else {
+                limit = mRoutes.getSearchTime();
+            }
+            mLinkedConnectionsProvider.getLinkedConnectionsByUrlForTimeSpanBackwards(stop,limit,
                                                                      listener,
                                                                      listener,
                                                                      mMeteredRequest);

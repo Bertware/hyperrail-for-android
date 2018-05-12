@@ -81,7 +81,7 @@ public class ConnectionsBenchmark implements IRailErrorResponseListener, IRailSu
 
         start = new HashMap<>();
         end = new HashMap<>();
-        LinkedConnectionsApi api = new LinkedConnectionsApi(InstrumentationRegistry.getTargetContext());
+        IrailDataProvider api = new Lc2IrailApi(InstrumentationRegistry.getTargetContext());
         //api.setCacheEnabled(false);
 
 

@@ -52,6 +52,8 @@ public class LiveboardResponseListener implements IRailSuccessResponseListener<L
     private String current;
     private String next;
 
+    private int pages = 0;
+
     public LiveboardResponseListener(LinkedConnectionsProvider linkedConnectionsProvider, IrailStationProvider stationProvider, IrailLiveboardRequest request) {
         mLinkedConnectionsProvider = linkedConnectionsProvider;
         mStationProvider = stationProvider;
@@ -91,22 +93,25 @@ public class LiveboardResponseListener implements IRailSuccessResponseListener<L
                 departureIndexForArrivals.add(departures.size());
             }
         }
+        pages++;
 
-
-        if (request.getType() == Liveboard.LiveboardType.DEPARTURES && departures.size() > 0 || request.getType() == ARRIVALS && arrivals.size() > 0) {
+        if ((request.getType() == Liveboard.LiveboardType.DEPARTURES && departures.size() > 0) || (request.getType() == ARRIVALS && arrivals.size() > 0)) {
             VehicleStop[] stoparray = generateStopArray();
             Liveboard liveboard = new Liveboard(request.getStation(), stoparray, request.getSearchTime(), request.getType(), request.getTimeDefinition());
             liveboard.setPageInfo(new PagedResourceDescriptor(previous, current, next));
+            Log.i("LiveboardResponse","Found " + stoparray.length + " results after searching " + pages + " pages");
             request.notifySuccessListeners(liveboard);
             ((MeteredRequest) tag).setMsecParsed(DateTime.now().getMillis());
         } else {
+            Log.i("LiveboardResponse","Found no results");
             String link = data.next;
             // When searching for "arrive before", we need to look backwards
             if (request.getTimeDefinition() == RouteTimeDefinition.ARRIVE_AT) {
                 link = data.previous;
             }
 
-            if (data.connections.length > 0 && data.connections[0].getDepartureTime().isAfter(request.getSearchTime().plusHours(24))) {
+            // TODO: use a better way than comparing searchTime, as searchTime can be unchanged when extending a liveboard
+            if (data.connections.length > 0 && data.connections[0].getDepartureTime().isAfter(request.getSearchTime().plusHours(48))) {
                 request.notifyErrorListeners(new FileNotFoundException());
                 return;
             }
@@ -203,7 +208,7 @@ public class LiveboardResponseListener implements IRailSuccessResponseListener<L
                                           departure.getDepartureTime(),
                                           null,
                                           Duration.standardSeconds(departure.getDepartureDelay()),
-                                          null,
+                                          new Duration(0),
                                           false,
                                           false,
                                           departure.getDelayedDepartureTime().isBeforeNow(),
@@ -235,7 +240,7 @@ public class LiveboardResponseListener implements IRailSuccessResponseListener<L
                                           true,
                                           null,
                                           arrival.getArrivalTime(),
-                                          null,
+                                          new Duration(0),
                                           Duration.standardSeconds(arrival.getArrivalDelay()),
                                           false,
                                           false,

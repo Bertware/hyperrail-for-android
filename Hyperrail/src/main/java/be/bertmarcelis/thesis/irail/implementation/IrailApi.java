@@ -149,7 +149,7 @@ public class IrailApi implements IrailDataProvider {
     public void extendRoutes(@NonNull ExtendRoutesRequest... requests) {
         for (ExtendRoutesRequest request :
                 requests) {
-            RouteAppendHelper helper = new RouteAppendHelper();
+            RouteAppendHelper helper = new RouteAppendHelper(this);
             helper.extendRoutesRequest(request);
         }
     }
@@ -240,7 +240,7 @@ public class IrailApi implements IrailDataProvider {
     public void extendLiveboard(@NonNull ExtendLiveboardRequest... requests) {
         for (ExtendLiveboardRequest request :
                 requests) {
-            LiveboardAppendHelper helper = new LiveboardAppendHelper();
+            LiveboardAppendHelper helper = new LiveboardAppendHelper(this);
             helper.extendLiveboard(request);
         }
     }

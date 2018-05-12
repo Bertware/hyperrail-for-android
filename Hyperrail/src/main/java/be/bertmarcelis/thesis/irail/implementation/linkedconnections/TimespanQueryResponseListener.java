@@ -19,12 +19,17 @@ public class TimespanQueryResponseListener implements QueryResponseListener.Link
     private final IRailSuccessResponseListener<LinkedConnections> mSuccessListener;
     private final IRailErrorResponseListener mErrorListener;
     private final Object mTag;
+    public final static int DIRECTION_FORWARD = 1;
+    public final static int DIRECTION_BACKWARD = -1;
+
+    private final int mDirection;
 
     private List<LinkedConnection> result = new ArrayList<>();
-    private String previous, current;
+    private String previous, current, next;
 
-    TimespanQueryResponseListener(final DateTime endTime, @Nullable final IRailSuccessResponseListener<LinkedConnections> successListener, @Nullable final IRailErrorResponseListener errorListener, @Nullable Object tag) {
+    TimespanQueryResponseListener(final DateTime endTime, int direction, @Nullable final IRailSuccessResponseListener<LinkedConnections> successListener, @Nullable final IRailErrorResponseListener errorListener, @Nullable Object tag) {
         mEndTime = endTime;
+        mDirection = direction;
         mSuccessListener = successListener;
         mErrorListener = errorListener;
         mTag = tag;
@@ -33,14 +38,24 @@ public class TimespanQueryResponseListener implements QueryResponseListener.Link
     @Override
     public int onQueryResult(LinkedConnections data) {
         if (current == null) {
-            previous = data.previous;
+            if (mDirection == DIRECTION_FORWARD) {
+                previous = data.previous;
+            } else {
+                next = data.next;
+            }
             current = data.current;
         }
-
+        if (mDirection == DIRECTION_BACKWARD) {
+            previous = data.previous;
+            current = data.current;
+        } else {
+            next = data.next;
+        }
         Collections.addAll(result, data.connections);
 
-        if (data.connections[data.connections.length - 1].getDepartureTime().isBefore(mEndTime)) {
-            return 1;
+        if ((mDirection > 0 && data.connections[data.connections.length - 1].getDepartureTime().isBefore(mEndTime)) ||
+                (mDirection < 0 && data.connections[0].getDepartureTime().isAfter(mEndTime))) {
+            return mDirection;
         } else {
             LinkedConnections resultObject = new LinkedConnections();
             LinkedConnection[] connections = new LinkedConnection[result.size()];
@@ -48,7 +63,7 @@ public class TimespanQueryResponseListener implements QueryResponseListener.Link
             resultObject.connections = connections;
             resultObject.current = current;
             resultObject.previous = previous;
-            resultObject.next = data.next;
+            resultObject.next = next;
             if (mSuccessListener != null) {
                 mSuccessListener.onSuccessResponse(resultObject, mTag);
             }

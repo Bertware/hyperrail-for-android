@@ -22,7 +22,6 @@ import be.bertmarcelis.thesis.irail.contracts.IRailErrorResponseListener;
 import be.bertmarcelis.thesis.irail.contracts.IRailSuccessResponseListener;
 import be.bertmarcelis.thesis.irail.contracts.IrailDataProvider;
 import be.bertmarcelis.thesis.irail.contracts.RouteTimeDefinition;
-import be.bertmarcelis.thesis.irail.factories.IrailFactory;
 import be.bertmarcelis.thesis.irail.implementation.Liveboard;
 import be.bertmarcelis.thesis.irail.implementation.VehicleStop;
 import be.bertmarcelis.thesis.irail.implementation.VehicleStopType;
@@ -42,7 +41,11 @@ public class LiveboardAppendHelper implements IRailSuccessResponseListener<Liveb
     private Liveboard originalLiveboard;
     private ExtendLiveboardRequest mExtendRequest;
 
-    IrailDataProvider api = IrailFactory.getDataProviderInstance();
+    private IrailDataProvider api;
+
+    public LiveboardAppendHelper(IrailDataProvider api) {
+        this.api = api;
+    }
 
     public void extendLiveboard(@NonNull ExtendLiveboardRequest extendRequest) {
         switch (extendRequest.getAction()) {
@@ -135,34 +138,10 @@ public class LiveboardAppendHelper implements IRailSuccessResponseListener<Liveb
      * @param data The newly received data
      */
     private void handleAppendSuccessResponse(@NonNull Liveboard data) {
-        VehicleStop[] newStops = data.getStops();
+        int originalLength = originalLiveboard.getStops().length;
+        Liveboard result = originalLiveboard.withStopsAppended(data);
 
-        if (newStops.length > 0) {
-            // It can happen that a scheduled departure was before the search time.
-            // In this case, prevent duplicates by searching the first stop which isn't before
-            // the searchdate, and removing all earlier stops.
-            int i = 0;
-
-            if (data.getLiveboardType() == Liveboard.LiveboardType.DEPARTURES) {
-                while (i < newStops.length && newStops[i].getDepartureTime().isBefore(data.getSearchTime())) {
-                    i++;
-                }
-            } else {
-                while (i < newStops.length && newStops[i].getArrivalTime().isBefore(data.getSearchTime())) {
-                    i++;
-                }
-            }
-
-            if (i > 0) {
-                if (i <= data.getStops().length - 1) {
-                    newStops = Arrays.copyOfRange(data.getStops(), i, data.getStops().length - 1);
-                } else {
-                    newStops = new VehicleStop[0];
-                }
-            }
-        }
-
-        if (newStops.length > 0) {
+        if (result.getStops().length> originalLength) {
             mExtendRequest.notifySuccessListeners(originalLiveboard.withStopsAppended(data));
         } else {
             // No results, search two hours further in case this day doesn't have results.

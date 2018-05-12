@@ -1,5 +1,6 @@
 package be.bertmarcelis.thesis.test;
 
+import android.net.TrafficStats;
 import android.os.AsyncTask;
 import android.support.annotation.NonNull;
 import android.support.test.InstrumentationRegistry;
@@ -37,6 +38,10 @@ public class TrainIndexBenchmark implements IRailErrorResponseListener, IRailSuc
 
     HashMap<String, Long> start;
     HashMap<String, Long> end;
+    HashMap<String, Long> txStart;
+    HashMap<String, Long> txEnd;
+    HashMap<String, Long> rxStart;
+    HashMap<String, Long> rxEnd;
     ArrayList<String> done;
     private volatile boolean free = true;
 
@@ -50,8 +55,12 @@ public class TrainIndexBenchmark implements IRailErrorResponseListener, IRailSuc
 
         start = new HashMap<>();
         end = new HashMap<>();
+        rxStart = new HashMap<>();
+        rxEnd = new HashMap<>();
+        txStart = new HashMap<>();
+        txEnd = new HashMap<>();
         IrailDataProvider api = new LinkedConnectionsApi(InstrumentationRegistry.getTargetContext());
-       // api.setCacheEnabled(false);
+        // api.setCacheEnabled(false);
 
         for (int i = 0; i < trains.length; i += 20) {
             String train = trains[i];
@@ -65,28 +74,14 @@ public class TrainIndexBenchmark implements IRailErrorResponseListener, IRailSuc
 
             Log.d("BENCHMARK", i + "/" + trains.length);
             free = false;
-            IrailVehicleRequest r = new IrailVehicleRequest(train, new DateTime(2018, 5, 1, 6, 0));
+            IrailVehicleRequest r = new IrailVehicleRequest(train, new DateTime(2018, 5, 5, 6, 0));
             start.put(train, DateTime.now().getMillis());
+            rxStart.put(train, TrafficStats.getUidRxBytes(android.os.Process.myUid()));
+            txStart.put(train, TrafficStats.getUidTxBytes(android.os.Process.myUid()));
+
             r.setCallback(TrainIndexBenchmark.this, TrainIndexBenchmark.this, train);
 
             api.getVehicle(r);
-
-            if (i > 0 && i % 100 == 0) {
-                long min = 5000, max = 0, avg = 0;
-                for (String t : done) {
-                    Duration d = new Duration(start.get(t), end.get(t));
-                    long ms = d.getMillis();
-                    if (ms < min) {
-                        min = ms;
-                    }
-                    if (ms > max) {
-                        max = ms;
-                    }
-                    avg += ms;
-                }
-                avg = avg / done.size();
-                Log.e("BENCHMARK", "min " + min + " avg " + avg + " max " + max);
-            }
         }
 
         long min = 5000, max = 0, avg = 0;
@@ -100,6 +95,7 @@ public class TrainIndexBenchmark implements IRailErrorResponseListener, IRailSuc
                 max = ms;
             }
             avg += ms;
+            Log.e("BENCHMARK", ms + "," + (txEnd.get(train) - txStart.get(train)) + "," + (rxEnd.get(train) - rxStart.get(train)));
         }
         avg = avg / done.size();
         Log.e("BENCHMARK", "min " + min + " avg " + avg + " max " + max);
@@ -108,6 +104,9 @@ public class TrainIndexBenchmark implements IRailErrorResponseListener, IRailSuc
     @Override
     public void onErrorResponse(@NonNull Exception e, Object tag) {
         end.put((String) tag, DateTime.now().getMillis());
+        rxEnd.put((String) tag, TrafficStats.getUidRxBytes(android.os.Process.myUid()));
+        txEnd.put((String) tag, TrafficStats.getUidTxBytes(android.os.Process.myUid()));
+
         Duration d = new Duration(start.get(tag), end.get(tag));
         long ms = d.getMillis();
         free = true;
@@ -117,6 +116,9 @@ public class TrainIndexBenchmark implements IRailErrorResponseListener, IRailSuc
     @Override
     public void onSuccessResponse(@NonNull Vehicle data, Object tag) {
         end.put((String) tag, DateTime.now().getMillis());
+        rxEnd.put((String) tag, TrafficStats.getUidRxBytes(android.os.Process.myUid()));
+        txEnd.put((String) tag, TrafficStats.getUidTxBytes(android.os.Process.myUid()));
+
         done.add((String) tag);
         Duration d = new Duration(start.get(tag), end.get(tag));
         long ms = d.getMillis();

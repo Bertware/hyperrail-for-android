@@ -26,7 +26,6 @@ import be.bertmarcelis.thesis.irail.contracts.IRailErrorResponseListener;
 import be.bertmarcelis.thesis.irail.contracts.IRailSuccessResponseListener;
 import be.bertmarcelis.thesis.irail.contracts.IrailDataProvider;
 import be.bertmarcelis.thesis.irail.contracts.RouteTimeDefinition;
-import be.bertmarcelis.thesis.irail.factories.IrailFactory;
 import be.bertmarcelis.thesis.irail.implementation.Route;
 import be.bertmarcelis.thesis.irail.implementation.RouteResult;
 import be.bertmarcelis.thesis.irail.implementation.requests.ExtendRoutesRequest;
@@ -45,8 +44,12 @@ public class RouteAppendHelper implements IRailSuccessResponseListener<RouteResu
     private DateTime lastSearchTime;
     private RouteResult originalRouteResult;
 
-    IrailDataProvider api = IrailFactory.getDataProviderInstance();
+    private IrailDataProvider api;
     private ExtendRoutesRequest mExtendRoutesRequest;
+
+    public RouteAppendHelper(IrailDataProvider api) {
+        this.api = api;
+    }
 
     public void extendRoutesRequest(@NonNull ExtendRoutesRequest extendRoutesRequest) {
         switch (extendRoutesRequest.getAction()) {
