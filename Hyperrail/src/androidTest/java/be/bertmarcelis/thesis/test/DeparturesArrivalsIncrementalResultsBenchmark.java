@@ -6,6 +6,16 @@ import android.support.test.InstrumentationRegistry;
 import android.support.test.runner.AndroidJUnit4;
 import android.util.Log;
 
+import com.android.volley.AuthFailureError;
+import com.android.volley.DefaultRetryPolicy;
+import com.android.volley.NetworkResponse;
+import com.android.volley.Request;
+import com.android.volley.RequestQueue;
+import com.android.volley.Response;
+import com.android.volley.VolleyError;
+import com.android.volley.toolbox.StringRequest;
+import com.android.volley.toolbox.Volley;
+
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
 import org.json.JSONException;
@@ -17,6 +27,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Map;
 
 import be.bertmarcelis.thesis.irail.contracts.IRailErrorResponseListener;
 import be.bertmarcelis.thesis.irail.contracts.IRailSuccessResponseListener;
@@ -38,7 +49,7 @@ import be.bertmarcelis.thesis.irail.implementation.requests.IrailLiveboardReques
 @RunWith(AndroidJUnit4.class)
 public class DeparturesArrivalsIncrementalResultsBenchmark implements IRailErrorResponseListener, IRailSuccessResponseListener<Liveboard> {
 
-    private volatile HashMap<String, Long> start;
+    private volatile HashMap<String, Long> mTimeStart;
     private volatile HashMap<String, Long[]> mTimeEnd;
     private volatile HashMap<String, Long> mRxBytesStart;
     private volatile HashMap<String, Long[]> mRxBytesEnd;
@@ -50,6 +61,7 @@ public class DeparturesArrivalsIncrementalResultsBenchmark implements IRailError
     private static final int TARGET_RESULTS = 200;
     private IrailDataProvider api;
     private int attempts = 0;
+    private static RequestQueue mRq;
 
     /**
      * Measure how long it takes to load linked connections pages asynchronously
@@ -61,7 +73,7 @@ public class DeparturesArrivalsIncrementalResultsBenchmark implements IRailError
         final ArrayList<DateTime> queryDates = new ArrayList<>();
 
         ArrayList<String> querylog = new ArrayList<>();
-
+        mRq = Volley.newRequestQueue(InstrumentationRegistry.getContext());
         try (InputStream in = InstrumentationRegistry.getContext().getResources().openRawResource(be.bertmarcelis.thesis.test.R.raw.irailapi_liveboard)) {
             java.util.Scanner s = new java.util.Scanner(in).useDelimiter("\\A");
             while (s.hasNextLine()) querylog.add(s.nextLine());
@@ -81,16 +93,16 @@ public class DeparturesArrivalsIncrementalResultsBenchmark implements IRailError
             }
         }
         Log.w("BENCHMARK", "LC");
-       /* api = new LinkedConnectionsApi(InstrumentationRegistry.getTargetContext());
+        api = new LinkedConnectionsApi(InstrumentationRegistry.getTargetContext());
         benchmark(stations, queryDates);
-        Log.w("BENCHMARK", "LC2IRAIL");*/
+        Log.w("BENCHMARK", "LC2IRAIL");
         api = new Lc2IrailApi(InstrumentationRegistry.getTargetContext());
         benchmark(stations, queryDates);
     }
 
     public void benchmark(ArrayList<String> stations, ArrayList<DateTime> queryDates) throws StationNotResolvedException {
         done = new ArrayList<>();
-        start = new HashMap<>();
+        mTimeStart = new HashMap<>();
         mTimeEnd = new HashMap<>();
         mRxBytesStart = new HashMap<>();
         mRxBytesEnd = new HashMap<>();
@@ -113,77 +125,94 @@ public class DeparturesArrivalsIncrementalResultsBenchmark implements IRailError
             free = false;
 
             IrailLiveboardRequest r = new IrailLiveboardRequest(stationProvider.getStationByUri(station), RouteTimeDefinition.DEPART_AT, Liveboard.LiveboardType.DEPARTURES, queryDates.get(i));
-            start.put(r.toString(), DateTime.now().getMillis());
+            mTimeStart.put(r.toString(), DateTime.now().getMillis());
             mTxBytesStart.put(r.toString(), TrafficStats.getUidTxBytes(android.os.Process.myUid()));
             mRxBytesStart.put(r.toString(), TrafficStats.getUidRxBytes(android.os.Process.myUid()));
             r.setCallback(DeparturesArrivalsIncrementalResultsBenchmark.this, DeparturesArrivalsIncrementalResultsBenchmark.this, r.toString());
 
             api.getLiveboard(r);
         }
-
+        while (!free) {
+            try {
+                Thread.sleep(500);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+        StringBuilder result = new StringBuilder("TIJD");
 
         Log.e("BENCHMARK", "TIJD");
         for (String request : done) {
             try {
-                Long t1 = start.get(request);
+                Long t1 = mTimeStart.get(request);
                 Long[] times = mTimeEnd.get(request);
-                StringBuilder result = new StringBuilder();
-                result.append(t1.toString()).append(",");
+                StringBuilder subresult = new StringBuilder();
+                subresult.append(t1.toString()).append(",");
                 for (Long time : times) {
                     if (time - t1 >= 0 && time - t1 < 30000) {
-                        result.append(time - t1);
+                        subresult.append(time - t1);
                     }
-                    result.append(",");
+                    subresult.append(",");
                 }
-                Log.e("BENCHMARK", result.toString());
+                Log.e("BENCHMARK", subresult.toString());
+                result.append(subresult).append("\n");
             } catch (Exception e) {
-
+                Log.e("DepArrBench", e.getMessage());
             }
         }
+        result.append("TX TX TX").append("\n");
         Log.e("BENCHMARK", "TX");
         for (String request : done) {
             try {
                 Long startBytes = mTxBytesStart.get(request);
                 Long[] bytesArray = mTxBytesEnd.get(request);
-                StringBuilder result = new StringBuilder();
-                result.append(startBytes.toString()).append(",");
+                StringBuilder subresult = new StringBuilder();
+                subresult.append(startBytes.toString()).append(",");
                 for (Long bytes : bytesArray) {
-                    if (bytes - startBytes >= 0 && bytes > 0) {
-                        result.append(bytes - startBytes);
+                    if (bytes - startBytes >= 0 && bytes >= 0) {
+                        subresult.append(bytes - startBytes);
                     }
-                    result.append(",");
+                    subresult.append(",");
                 }
-                Log.e("BENCHMARK", result.toString());
+                Log.e("BENCHMARK", subresult.toString());
+                result.append(subresult).append("\n");
             } catch (Exception e) {
-
+                Log.e("DepArrBench", e.getMessage());
             }
         }
         Log.e("BENCHMARK", "RX");
+        result.append("RX RX RX").append("\n");
         for (String request : done) {
             try {
-
                 Long startBytes = mRxBytesStart.get(request);
                 Long[] bytesArrat = mRxBytesEnd.get(request);
-                StringBuilder result = new StringBuilder();
-                result.append(startBytes.toString()).append(",");
+                StringBuilder subresult = new StringBuilder();
+                subresult.append(startBytes.toString()).append(",");
                 for (Long bytes : bytesArrat) {
-                    if (bytes - startBytes >= 0 && bytes > 0) {
-                        result.append(bytes - startBytes);
+                    if (bytes - startBytes >= 0 && bytes >= 0) {
+                        subresult.append(bytes - startBytes);
                     }
-                    result.append(",");
+                    subresult.append(",");
                 }
-                Log.e("BENCHMARK", result.toString());
+                Log.e("BENCHMARK", subresult.toString());
+                result.append(subresult).append("\n");
             } catch (Exception e) {
-
+                Log.e("DepArrBench", e.getMessage());
             }
         }
+
+        String apiName = "LC";
+        if (api instanceof Lc2IrailApi) {
+            apiName = "LC2Irail";
+        }
+        post("INCRTEST-" + apiName, result.toString());
     }
 
     @Override
     public void onErrorResponse(@NonNull Exception e, Object tag) {
-        Duration d = new Duration(start.get(tag), DateTime.now().getMillis());
+        Duration d = new Duration(mTimeStart.get(tag), DateTime.now().getMillis());
         long ms = d.getMillis();
-        if (mTimeEnd.containsKey(tag)) {
+        if (mTimeEnd.containsKey(tag) && (mTimeEnd.get(tag)[50] - mTimeStart.get(tag)) > 0) {
             done.add((String) tag);
         }
         free = true;
@@ -200,8 +229,8 @@ public class DeparturesArrivalsIncrementalResultsBenchmark implements IRailError
             Long[] initialtx = new Long[TARGET_RESULTS];
             for (int i = 0; i < TARGET_RESULTS; i++) {
                 initial[i] = 0L;
-                initialrx[i] = 0L;
-                initialtx[i] = 0L;
+                initialrx[i] = -1L;
+                initialtx[i] = -1L;
             }
             mTimeEnd.put(key, initial);
             mTxBytesEnd.put(key, initialtx);
@@ -224,10 +253,10 @@ public class DeparturesArrivalsIncrementalResultsBenchmark implements IRailError
         mTxBytesEnd.put(key, tx);
         mRxBytesEnd.put(key, rx);
 
-        Duration d = new Duration(start.get(tag), millis);
+        Duration d = new Duration(mTimeStart.get(tag), millis);
         long ms = d.getMillis();
         attempts++;
-        if (i < TARGET_RESULTS && ms < 20000 && attempts < 64) {
+        if ((i < 50 && ms < 60000) || (i < TARGET_RESULTS && ms < 30000) && attempts < 32) {
             //Log.d("BENCHMARK", "extend after " + ms + "ms (" + i + " results)");
             ExtendLiveboardRequest request = new ExtendLiveboardRequest(data, ExtendLiveboardRequest.Action.APPEND);
             request.setCallback(this, this, tag);
@@ -240,5 +269,45 @@ public class DeparturesArrivalsIncrementalResultsBenchmark implements IRailError
 
     }
 
+    private static void post(final String name, final String data) {
+        String url = "https://log.thesis.bertmarcelis.be/post.php";
+        final String TAG = "POSTDATA";
+        //String uri = String.format(Locale.US, URL);
+        StringRequest stringRequest = new StringRequest(Request.Method.POST, url,
+                                                        new com.android.volley.Response.Listener<String>() {
+                                                            @Override
+                                                            public void onResponse(String response) {
+                                                                Log.d(TAG, "String Success :" + response);
+                                                            }
+                                                        },
+                                                        new com.android.volley.Response.ErrorListener() {
+                                                            @Override
+                                                            public void onErrorResponse(VolleyError error) {
+                                                                Log.d(TAG, "String  Error In Request :" + error.toString());
+                                                            }
+                                                        }) {
+            @Override
+            protected Response<String> parseNetworkResponse(NetworkResponse response) {
+                return super.parseNetworkResponse(response);
+            }
+
+            @Override
+            public byte[] getBody() throws AuthFailureError {
+                return data.getBytes();
+            }
+
+            @Override
+            public Map<String, String> getHeaders() throws AuthFailureError {
+                HashMap<String, String> headers = new HashMap<String, String>();
+                String AuthToken = "903825";
+                headers.put("auth", AuthToken);
+                headers.put("source", name);
+                return headers;
+            }
+        };
+        stringRequest.setRetryPolicy(new DefaultRetryPolicy(15000, DefaultRetryPolicy.DEFAULT_MAX_RETRIES,
+                                                            DefaultRetryPolicy.DEFAULT_BACKOFF_MULT));
+        mRq.add(stringRequest);
+    }
 }
 

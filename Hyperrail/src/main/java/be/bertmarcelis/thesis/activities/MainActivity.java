@@ -47,6 +47,7 @@ import android.view.MenuItem;
 import android.view.View;
 
 import be.bertmarcelis.thesis.R;
+import be.bertmarcelis.thesis.batterytesting.BatteryTestActivity;
 import be.bertmarcelis.thesis.fragments.FeedbackFragment;
 import be.bertmarcelis.thesis.fragments.LiveboardSearchFragment;
 import be.bertmarcelis.thesis.fragments.RouteSearchFragment;
@@ -297,8 +298,9 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
                 PreferenceManager.getDefaultSharedPreferences(this).edit().putString("api", "lc").apply();
                 IrailFactory.setup(this);
                 break;
-            case R.id.action_store:
-                IrailFactory.logMeteredApiData(this,false);
+            case R.id.action_battery_test:
+                Intent i = new Intent(this, BatteryTestActivity.class);
+                startActivity(i);
                 break;
             case R.id.action_liveboard:
                 setView(VIEW_TYPE_LIVEBOARD, null);
@@ -313,8 +315,8 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
                 setView(VIEW_TYPE_DISTURBANCE, null);
                 break;
             case R.id.action_settings:
-                Intent i = new Intent(this, SettingsActivity.class);
-                startActivity(i);
+                Intent batteryIntent = new Intent(this, SettingsActivity.class);
+                startActivity(batteryIntent);
                 break;
             case R.id.action_feedback:
                 setView(VIEW_TYPE_FEEDBACK, null);

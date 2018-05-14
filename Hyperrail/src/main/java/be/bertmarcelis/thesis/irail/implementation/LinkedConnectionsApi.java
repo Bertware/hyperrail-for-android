@@ -84,7 +84,7 @@ public class LinkedConnectionsApi implements IrailDataProvider, MeteredApi {
 
     private void getLiveboard(@NonNull final IrailLiveboardRequest request) {
         StartLiveboardRequestTask task = new StartLiveboardRequestTask(this);
-        task.execute(request);
+        task.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, request);
     }
 
     @Override
@@ -113,7 +113,7 @@ public class LinkedConnectionsApi implements IrailDataProvider, MeteredApi {
     }
 
     private void getRoutes(@NonNull final IrailRoutesRequest request) {
-        new StartRouteRequestTask(this).execute(request);
+        new StartRouteRequestTask(this).executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, request);
     }
 
     @Override
@@ -192,7 +192,7 @@ public class LinkedConnectionsApi implements IrailDataProvider, MeteredApi {
 
     private void getVehicle(@NonNull final IrailVehicleRequest request) {
         StartVehicleRequestTask StartVehicleRequestTask = new StartVehicleRequestTask(this);
-        StartVehicleRequestTask.execute(request);
+        StartVehicleRequestTask.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, request);
     }
 
     @Override

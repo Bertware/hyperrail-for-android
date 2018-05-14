@@ -83,12 +83,12 @@ public class ConnectionsIncrementalResultsBenchmark implements IRailErrorRespons
             }
         }
 
-        Log.w("BENCHMARK", "LC");
+      /*  Log.w("BENCHMARK", "LC");
         api = new LinkedConnectionsApi(InstrumentationRegistry.getTargetContext());
-        benchmark(requests);
-  /*      Log.w("BENCHMARK", "LC2IRAIL");
+        benchmark(requests);*/
+        Log.w("BENCHMARK", "LC2IRAIL");
         api = new Lc2IrailApi(InstrumentationRegistry.getTargetContext());
-        benchmark(requests); */
+        benchmark(requests);
     }
 
     public void benchmark(ArrayList<IrailRoutesRequest> requests) throws StationNotResolvedException {
@@ -120,62 +120,80 @@ public class ConnectionsIncrementalResultsBenchmark implements IRailErrorRespons
 
             api.getRoutes(request);
         }
+        while (!free) {
+            try {
+                Thread.sleep(500);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+        StringBuilder result = new StringBuilder("TIJD");
 
         Log.e("BENCHMARK", "TIJD");
         for (String request : done) {
             try {
                 Long t1 = start.get(request);
                 Long[] times = mTimeEnd.get(request);
-                StringBuilder result = new StringBuilder();
-                result.append(t1.toString()).append(",");
+                StringBuilder subresult = new StringBuilder();
+                subresult.append(t1.toString()).append(",");
                 for (Long time : times) {
                     if (time - t1 >= 0 && time - t1 < 30000) {
-                        result.append(time - t1);
+                        subresult.append(time - t1);
                     }
-                    result.append(",");
+                    subresult.append(",");
                 }
-                Log.e("BENCHMARK", result.toString());
+                Log.e("BENCHMARK", subresult.toString());
+                result.append(subresult).append("\n");
             } catch (Exception e) {
-
+                Log.e("DepArrBench", e.getMessage());
             }
         }
+        result.append("TX TX TX").append("\n");
         Log.e("BENCHMARK", "TX");
         for (String request : done) {
             try {
                 Long startBytes = mTxBytesStart.get(request);
                 Long[] bytesArray = mTxBytesEnd.get(request);
-                StringBuilder result = new StringBuilder();
-                result.append(startBytes.toString()).append(",");
+                StringBuilder subresult = new StringBuilder();
+                subresult.append(startBytes.toString()).append(",");
                 for (Long bytes : bytesArray) {
-                    if (bytes - startBytes >= 0 && bytes > 0) {
-                        result.append(bytes - startBytes);
+                    if (bytes - startBytes >= 0 && bytes >= 0) {
+                        subresult.append(bytes - startBytes);
                     }
-                    result.append(",");
+                    subresult.append(",");
                 }
-                Log.e("BENCHMARK", result.toString());
+                Log.e("BENCHMARK", subresult.toString());
+                result.append(subresult).append("\n");
             } catch (Exception e) {
-
+                Log.e("DepArrBench", e.getMessage());
             }
         }
         Log.e("BENCHMARK", "RX");
+        result.append("RX RX RX").append("\n");
         for (String request : done) {
             try {
-
                 Long startBytes = mRxBytesStart.get(request);
                 Long[] bytesArrat = mRxBytesEnd.get(request);
-                StringBuilder result = new StringBuilder();
-                result.append(startBytes.toString()).append(",");
+                StringBuilder subresult = new StringBuilder();
+                subresult.append(startBytes.toString()).append(",");
                 for (Long bytes : bytesArrat) {
-                    if (bytes - startBytes >= 0 && bytes > 0) {
-                        result.append(bytes - startBytes);
+                    if (bytes - startBytes >= 0 && bytes >= 0) {
+                        subresult.append(bytes - startBytes);
                     }
-                    result.append(",");
+                    subresult.append(",");
                 }
-                Log.e("BENCHMARK", result.toString());
+                Log.e("BENCHMARK", subresult.toString());
+                result.append(subresult).append("\n");
             } catch (Exception e) {
-
+                Log.e("DepArrBench", e.getMessage());
             }
         }
+
+        String apiName = "LC";
+        if (api instanceof Lc2IrailApi) {
+            apiName = "LC2Irail";
+        }
+        Log.d("INCRTEST-" + apiName, result.toString());
     }
 
     @Override
@@ -200,8 +218,8 @@ public class ConnectionsIncrementalResultsBenchmark implements IRailErrorRespons
             Long[] initialtx = new Long[TARGET_RESULTS];
             for (int i = 0; i < TARGET_RESULTS; i++) {
                 initial[i] = 0L;
-                initialrx[i] = 0L;
-                initialtx[i] = 0L;
+                initialrx[i] = -1L;
+                initialtx[i] = -1L;
             }
             mTimeEnd.put(key, initial);
             mTxBytesEnd.put(key, initialtx);
@@ -226,7 +244,7 @@ public class ConnectionsIncrementalResultsBenchmark implements IRailErrorRespons
         Duration d = new Duration(start.get(tag), millis);
         long ms = d.getMillis();
         attempts++;
-        if (i < TARGET_RESULTS && ms < 20000 && attempts < 64) {
+        if (i < TARGET_RESULTS && ms < 20000 && attempts < 16) {
             Log.d("BENCHMARK", "extend after " + ms + "ms (" + i + " results)");
             ExtendRoutesRequest request = new ExtendRoutesRequest(data, ExtendRoutesRequest.Action.APPEND);
             request.setCallback(this, this, tag);
