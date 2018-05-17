@@ -58,7 +58,7 @@ public class DeparturesArrivalsIncrementalResultsBenchmark implements IRailError
     private volatile ArrayList<String> done;
     private volatile boolean free = true;
 
-    private static final int TARGET_RESULTS = 200;
+    private static final int TARGET_RESULTS = 20;
     private IrailDataProvider api;
     private int attempts = 0;
     private static RequestQueue mRq;
@@ -111,7 +111,7 @@ public class DeparturesArrivalsIncrementalResultsBenchmark implements IRailError
 
         IrailStationProvider stationProvider = new StationsDb(InstrumentationRegistry.getTargetContext());
 
-        for (int i = 0; i < stations.size(); i += 20) {
+        for (int i = 0; i < stations.size(); i += 5) {
             String station = stations.get(i);
             while (!free) {
                 try {
@@ -146,7 +146,7 @@ public class DeparturesArrivalsIncrementalResultsBenchmark implements IRailError
             try {
                 Long t1 = mTimeStart.get(request);
                 Long[] times = mTimeEnd.get(request);
-                StringBuilder subresult = new StringBuilder();
+                StringBuilder subresult = new StringBuilder().append(request).append(",");
                 subresult.append(t1.toString()).append(",");
                 for (Long time : times) {
                     if (time - t1 >= 0 && time - t1 < 30000) {
@@ -166,7 +166,7 @@ public class DeparturesArrivalsIncrementalResultsBenchmark implements IRailError
             try {
                 Long startBytes = mTxBytesStart.get(request);
                 Long[] bytesArray = mTxBytesEnd.get(request);
-                StringBuilder subresult = new StringBuilder();
+                StringBuilder subresult = new StringBuilder().append(request).append(",");
                 subresult.append(startBytes.toString()).append(",");
                 for (Long bytes : bytesArray) {
                     if (bytes - startBytes >= 0 && bytes >= 0) {
@@ -186,7 +186,7 @@ public class DeparturesArrivalsIncrementalResultsBenchmark implements IRailError
             try {
                 Long startBytes = mRxBytesStart.get(request);
                 Long[] bytesArrat = mRxBytesEnd.get(request);
-                StringBuilder subresult = new StringBuilder();
+                StringBuilder subresult = new StringBuilder().append(request).append(",");
                 subresult.append(startBytes.toString()).append(",");
                 for (Long bytes : bytesArrat) {
                     if (bytes - startBytes >= 0 && bytes >= 0) {
@@ -212,7 +212,7 @@ public class DeparturesArrivalsIncrementalResultsBenchmark implements IRailError
     public void onErrorResponse(@NonNull Exception e, Object tag) {
         Duration d = new Duration(mTimeStart.get(tag), DateTime.now().getMillis());
         long ms = d.getMillis();
-        if (mTimeEnd.containsKey(tag) && (mTimeEnd.get(tag)[50] - mTimeStart.get(tag)) > 0) {
+        if (mTimeEnd.containsKey(tag) && (mTimeEnd.get(tag)[TARGET_RESULTS-1] - mTimeStart.get(tag)) > 0) {
             done.add((String) tag);
         }
         free = true;
@@ -256,7 +256,7 @@ public class DeparturesArrivalsIncrementalResultsBenchmark implements IRailError
         Duration d = new Duration(mTimeStart.get(tag), millis);
         long ms = d.getMillis();
         attempts++;
-        if ((i < 50 && ms < 60000) || (i < TARGET_RESULTS && ms < 30000) && attempts < 32) {
+        if (i < TARGET_RESULTS && ms < 60000 && attempts < 32) {
             //Log.d("BENCHMARK", "extend after " + ms + "ms (" + i + " results)");
             ExtendLiveboardRequest request = new ExtendLiveboardRequest(data, ExtendLiveboardRequest.Action.APPEND);
             request.setCallback(this, this, tag);

@@ -47,7 +47,7 @@ public class ConnectionsIncrementalResultsBenchmark implements IRailErrorRespons
     private volatile ArrayList<String> done;
     private volatile boolean free = true;
 
-    private static final int TARGET_RESULTS = 200;
+    private static final int TARGET_RESULTS = 10;
     private IrailDataProvider api;
     private int attempts = 0;
 
@@ -83,9 +83,9 @@ public class ConnectionsIncrementalResultsBenchmark implements IRailErrorRespons
             }
         }
 
-      /*  Log.w("BENCHMARK", "LC");
+        Log.w("BENCHMARK", "LC");
         api = new LinkedConnectionsApi(InstrumentationRegistry.getTargetContext());
-        benchmark(requests);*/
+        benchmark(requests);
         Log.w("BENCHMARK", "LC2IRAIL");
         api = new Lc2IrailApi(InstrumentationRegistry.getTargetContext());
         benchmark(requests);
@@ -100,7 +100,7 @@ public class ConnectionsIncrementalResultsBenchmark implements IRailErrorRespons
         mTxBytesStart = new HashMap<>();
         mTxBytesEnd = new HashMap<>();
 
-        for (int i = 0; i < requests.size(); i += 100) {
+        for (int i = 0; i < requests.size(); i += 15) {
             IrailRoutesRequest request = requests.get(i);
             while (!free) {
                 try {
@@ -134,10 +134,10 @@ public class ConnectionsIncrementalResultsBenchmark implements IRailErrorRespons
             try {
                 Long t1 = start.get(request);
                 Long[] times = mTimeEnd.get(request);
-                StringBuilder subresult = new StringBuilder();
+                StringBuilder subresult = new StringBuilder(request).append(",");
                 subresult.append(t1.toString()).append(",");
                 for (Long time : times) {
-                    if (time - t1 >= 0 && time - t1 < 30000) {
+                    if (time - t1 >= 0 && time - t1 < 600000) {
                         subresult.append(time - t1);
                     }
                     subresult.append(",");
@@ -154,7 +154,7 @@ public class ConnectionsIncrementalResultsBenchmark implements IRailErrorRespons
             try {
                 Long startBytes = mTxBytesStart.get(request);
                 Long[] bytesArray = mTxBytesEnd.get(request);
-                StringBuilder subresult = new StringBuilder();
+                StringBuilder subresult = new StringBuilder(request).append(",");
                 subresult.append(startBytes.toString()).append(",");
                 for (Long bytes : bytesArray) {
                     if (bytes - startBytes >= 0 && bytes >= 0) {
@@ -174,7 +174,7 @@ public class ConnectionsIncrementalResultsBenchmark implements IRailErrorRespons
             try {
                 Long startBytes = mRxBytesStart.get(request);
                 Long[] bytesArrat = mRxBytesEnd.get(request);
-                StringBuilder subresult = new StringBuilder();
+                StringBuilder subresult = new StringBuilder(request).append(",");
                 subresult.append(startBytes.toString()).append(",");
                 for (Long bytes : bytesArrat) {
                     if (bytes - startBytes >= 0 && bytes >= 0) {
@@ -200,7 +200,7 @@ public class ConnectionsIncrementalResultsBenchmark implements IRailErrorRespons
     public void onErrorResponse(@NonNull Exception e, Object tag) {
         Duration d = new Duration(start.get(tag), DateTime.now().getMillis());
         long ms = d.getMillis();
-        if (mTimeEnd.containsKey(tag)) {
+        if (mTimeEnd.containsKey(tag) && mTimeEnd.get(tag)[TARGET_RESULTS/2 - 1] > 0) {
             done.add((String) tag);
         }
         free = true;
@@ -244,7 +244,7 @@ public class ConnectionsIncrementalResultsBenchmark implements IRailErrorRespons
         Duration d = new Duration(start.get(tag), millis);
         long ms = d.getMillis();
         attempts++;
-        if (i < TARGET_RESULTS && ms < 20000 && attempts < 16) {
+        if (i < TARGET_RESULTS && attempts < 16) {
             Log.d("BENCHMARK", "extend after " + ms + "ms (" + i + " results)");
             ExtendRoutesRequest request = new ExtendRoutesRequest(data, ExtendRoutesRequest.Action.APPEND);
             request.setCallback(this, this, tag);

@@ -51,8 +51,8 @@ public class VehicleQueryResponseListener implements QueryResponseListener.Linke
         if (started == null){
             started = data.connections[0].getDepartureTime();
         } else {
-            if (new Duration(started,data.connections[0].getDepartureTime()).getStandardHours() > 24){
-                mErrorListener.onErrorResponse(new FileNotFoundException(),mTag);
+            if (new Duration(started,data.connections[0].getDepartureTime()).getStandardHours() > 48){
+                mErrorListener.onErrorResponse(new IndexOutOfBoundsException("Requested page too far from original start"),mTag);
                 return 0;
             }
         }

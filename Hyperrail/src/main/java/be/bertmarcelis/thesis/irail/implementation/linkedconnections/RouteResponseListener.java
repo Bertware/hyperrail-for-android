@@ -76,8 +76,8 @@ public class RouteResponseListener implements IRailSuccessResponseListener<Linke
     }
 
     public RouteResponseListener(LinkedConnectionsProvider linkedConnectionsProvider, IrailStationProvider stationProvider, IrailRoutesRequest routesRequest, DateTime departureLimit, int i) {
-        this(linkedConnectionsProvider,stationProvider,routesRequest,departureLimit);
-
+        this(linkedConnectionsProvider, stationProvider, routesRequest, departureLimit);
+        maxMinutes = i;
     }
 
     @AddTrace(name = "RouteResponseListener.process")
@@ -98,9 +98,9 @@ public class RouteResponseListener implements IRailSuccessResponseListener<Linke
             mLinkedConnectionsProvider.getLinkedConnectionsByUrl(data.previous, this, this, null);
         }
 
-        if (maxMinutes > 0){
-            DateTime limitByMinutes = data.connections[data.connections.length -1].getDepartureTime().minusMinutes(maxMinutes);
-            if (limitByMinutes.isBefore(mDepartureLimit)){
+        if (maxMinutes > 0) {
+            DateTime limitByMinutes = data.connections[data.connections.length - 1].getDepartureTime().minusMinutes(maxMinutes);
+            if (limitByMinutes.isAfter(mDepartureLimit)) {
                 mDepartureLimit = limitByMinutes;
             }
             maxMinutes = 0;
@@ -109,7 +109,7 @@ public class RouteResponseListener implements IRailSuccessResponseListener<Linke
         boolean hasPassedDepartureLimit = false;
         for (int i = data.connections.length - 1; i >= 0; i--) {
             LinkedConnection connection = data.connections[i];
-            if (!connection.isNormal()){
+            if (!connection.isNormal()) {
                 continue;
             }
 

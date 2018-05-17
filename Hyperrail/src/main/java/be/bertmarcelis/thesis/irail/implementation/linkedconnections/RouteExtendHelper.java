@@ -44,7 +44,7 @@ public class RouteExtendHelper implements IRailSuccessResponseListener<RouteResu
     private void extend(RouteResult routes) {
         attempts++;
 
-        if (attempts > 10){
+        if (attempts > 12) {
             mRequest.notifyErrorListeners(new FileNotFoundException());
             return;
         }
@@ -54,12 +54,13 @@ public class RouteExtendHelper implements IRailSuccessResponseListener<RouteResu
         DateTime departureLimit;
         if (mRequest.getRoutes().getTimeDefinition() == RouteTimeDefinition.DEPART_AT) {
             departureLimit = mRequest.getRoutes().getSearchTime();
+            if (mRequest.getRoutes().getRoutes().length > 0) {
+                departureLimit = mRequest.getRoutes().getRoutes()[mRequest.getRoutes().getRoutes().length - 1].getDepartureTime();
+            }
             if (mRequest.getAction() == ExtendRoutesRequest.Action.PREPEND) {
-                start = (String) mRequest.getRoutes().getPagedResourceDescriptor().getPreviousPointer();
-                stop = (String) mRequest.getRoutes().getPagedResourceDescriptor().getNextPointer();
-            } else {
                 start = (String) mRequest.getRoutes().getPagedResourceDescriptor().getCurrentPointer();
-                stop = (String) mRequest.getRoutes().getPagedResourceDescriptor().getNextPointer();
+            } else {
+                start = (String) mRequest.getRoutes().getPagedResourceDescriptor().getNextPointer();
             }
         } else {
             departureLimit = null;
@@ -82,20 +83,20 @@ public class RouteExtendHelper implements IRailSuccessResponseListener<RouteResu
         if (mRequest.getAction() == ExtendRoutesRequest.Action.PREPEND) {
             listener = new RouteResponseListener(mLinkedConnectionsProvider, mStationProvider, routesRequest, null);
         } else {
-            listener = new RouteResponseListener(mLinkedConnectionsProvider, mStationProvider, routesRequest, departureLimit,8*60);
+            listener = new RouteResponseListener(mLinkedConnectionsProvider, mStationProvider, routesRequest, departureLimit, 12 * 60);
         }
 
         if (mRequest.getRoutes().getTimeDefinition() == RouteTimeDefinition.DEPART_AT) {
             DateTime limit;
-            if (mRoutes.getRoutes() != null && mRoutes.getRoutes().length > 0){
+            if (mRoutes.getRoutes() != null && mRoutes.getRoutes().length > 0) {
                 limit = mRoutes.getRoutes()[mRoutes.getRoutes().length - 1].getDepartureTime();
             } else {
                 limit = mRoutes.getSearchTime();
             }
-            mLinkedConnectionsProvider.getLinkedConnectionsByUrlForTimeSpanBackwards(stop,limit,
-                                                                     listener,
-                                                                     listener,
-                                                                     mMeteredRequest);
+            mLinkedConnectionsProvider.getLinkedConnectionsByUrlForTimeSpanBackwards(start, limit,
+                                                                                     listener,
+                                                                                     listener,
+                                                                                     mMeteredRequest);
         } else {
             mLinkedConnectionsProvider.getLinkedConnectionsByUrl(start,
                                                                  listener,
