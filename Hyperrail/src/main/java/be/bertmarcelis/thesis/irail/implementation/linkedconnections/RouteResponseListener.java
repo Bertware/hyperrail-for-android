@@ -57,12 +57,12 @@ public class RouteResponseListener implements IRailSuccessResponseListener<Linke
     // Each entry in this array is an array of  (departuretime, arrivaltime) pairs, sorted by DESCENDING departuretime
     // A DESCENDING departurtime will ensure we always add to the back of the array, thus saving O(n) operations every time!
     // Note: for journey extraction, 2 data fields will be added. These fields can be ignored for the original Profile Connection Scan Algorithm
-    HashMap<String, List<StationQuadruple>> S = new HashMap<>();
+    HashMap<String, List<StopProfile>> S = new HashMap<>();
 
     // For every trip, keep the earliest possible arrival time
     // The earliest arrival time for the partial journey departing in the earliest scanned connection of the corresponding trip
     // Size m, where m is the number of trips
-    HashMap<String, TrainTriple> T = new HashMap<>();
+    HashMap<String, TrainProfile> T = new HashMap<>();
     private Object mTag;
     private String mNext;
     private String mPrevious;
@@ -170,7 +170,7 @@ public class RouteResponseListener implements IRailSuccessResponseListener<Linke
                 // but arrives as soon as possible
                 // The earliest departure is in the back of the array. This int will keep track of which pair we're evaluating.
                 int position = S.get(connection.getArrivalStationUri()).size() - 1;
-                StationQuadruple quadruple = S.get(connection.getArrivalStationUri()).get(position);
+                StopProfile quadruple = S.get(connection.getArrivalStationUri()).get(position);
 
                 // TODO: replace hard-coded transfer time
                 // As long as we're arriving AFTER the pair departure, move forward in the list until we find a departure which is reachable
@@ -282,28 +282,28 @@ public class RouteResponseListener implements IRailSuccessResponseListener<Linke
                     // Create a quadruple to lookup the first reachable connection in S
                     // Create one, because we don't know where we'd get on this train
 
-                    StationQuadruple quad = new StationQuadruple();
-                    quad.departureTime = connection.getDepartureTime();
-                    quad.departureConnection = connection;
+                    StopProfile stopProfile = new StopProfile();
+                    stopProfile.departureTime = connection.getDepartureTime();
+                    stopProfile.departureConnection = connection;
                     // Current situation
-                    quad.arrivalTime = Tmin;
-                    quad.arrivalConnection = currentTrainExit;
+                    stopProfile.arrivalTime = Tmin;
+                    stopProfile.arrivalConnection = currentTrainExit;
 
-                    Duration currentTransfer = new Duration(currentTrainExit.getArrivalTime(), getFirstReachableConnection(quad).departureTime);
+                    Duration currentTransfer = new Duration(currentTrainExit.getArrivalTime(), getFirstReachableConnection(stopProfile).departureTime);
 
                     // New situation
-                    quad.arrivalTime = Tmin;
-                    quad.arrivalConnection = exitTrainConnection;
-                    Duration newTransfer = new Duration(exitTrainConnection.getArrivalTime(), getFirstReachableConnection(quad).departureTime);
+                    stopProfile.arrivalTime = Tmin;
+                    stopProfile.arrivalConnection = exitTrainConnection;
+                    Duration newTransfer = new Duration(exitTrainConnection.getArrivalTime(), getFirstReachableConnection(stopProfile).departureTime);
 
                     // If the new situation is better
                     if (newTransfer.isLongerThan(currentTransfer)) {
-                        TrainTriple triple = new TrainTriple();
-                        triple.arrivalTime = Tmin;
-                        triple.arrivalConnection = exitTrainConnection;
-                        triple.transfers = numberOfTransfers;
+                        TrainProfile trainProfile = new TrainProfile();
+                        trainProfile.arrivalTime = Tmin;
+                        trainProfile.arrivalConnection = exitTrainConnection;
+                        trainProfile.transfers = numberOfTransfers;
 
-                        T.put(connection.getTrip(), triple);
+                        T.put(connection.getTrip(), trainProfile);
                     }
                 }
 
@@ -311,22 +311,22 @@ public class RouteResponseListener implements IRailSuccessResponseListener<Linke
                 if (Tmin.isBefore(T.get(connection.getTrip()).arrivalTime)) {
                     // exit = (new Station(exitTrainConnection->getArrivalStopUri()))->getDefaultName();
                     // Log::info("[{connection->getId()}] Updating T: Arrive at Tmin using {connection->getRoute()} with numberOfTransfers transfers. Get off at {exit}.");
-                    TrainTriple triple = new TrainTriple();
-                    triple.arrivalTime = Tmin;
-                    triple.arrivalConnection = exitTrainConnection;
-                    triple.transfers = numberOfTransfers;
+                    TrainProfile trainProfile = new TrainProfile();
+                    trainProfile.arrivalTime = Tmin;
+                    trainProfile.arrivalConnection = exitTrainConnection;
+                    trainProfile.transfers = numberOfTransfers;
 
-                    T.put(connection.getTrip(), triple);
+                    T.put(connection.getTrip(), trainProfile);
                 }
             } else {
                 // exit = (new Station(exitTrainConnection->getArrivalStopUri()))->getDefaultName();
                 // Log::info("[{connection->getId()}] Updating T: New: Arrive at Tmin using {connection->getRoute()} with numberOfTransfers transfers. Get off at {exit}.");
                 // To travel towards the destination, get off at the current arrival station (followed by a transfer or walk/arriving)
-                TrainTriple triple = new TrainTriple();
-                triple.arrivalTime = Tmin;
-                triple.arrivalConnection = exitTrainConnection;
-                triple.transfers = numberOfTransfers;
-                T.put(connection.getTrip(), triple);
+                TrainProfile trainProfile = new TrainProfile();
+                trainProfile.arrivalTime = Tmin;
+                trainProfile.arrivalConnection = exitTrainConnection;
+                trainProfile.transfers = numberOfTransfers;
+                T.put(connection.getTrip(), trainProfile);
             }
             // ====================================================== //
             // END UPDATE T
@@ -336,35 +336,35 @@ public class RouteResponseListener implements IRailSuccessResponseListener<Linke
             // START UPDATE S
             // ====================================================== //
 
-            // Create a quadruple to update S
-            StationQuadruple quad = new StationQuadruple();
-            quad.departureTime = connection.getDepartureTime();
-            quad.arrivalTime = Tmin;
+            // Create a stopProfile to update S
+            StopProfile newProfile = new StopProfile();
+            newProfile.departureTime = connection.getDepartureTime();
+            newProfile.arrivalTime = Tmin;
             // Additional data for journey extraction
-            quad.departureConnection = connection;
-            quad.arrivalConnection = T.get(connection.getTrip()).arrivalConnection;
-            quad.transfers = numberOfTransfers;
+            newProfile.departureConnection = connection;
+            newProfile.arrivalConnection = T.get(connection.getTrip()).arrivalConnection;
+            newProfile.transfers = numberOfTransfers;
             if (S.containsKey(connection.getDepartureStationUri())) {
                 int numberOfPairs = S.get(connection.getDepartureStationUri()).size();
-                StationQuadruple existingQuad = S.get(connection.getDepartureStationUri()).get(numberOfPairs - 1);
+                StopProfile existingProfile = S.get(connection.getDepartureStationUri()).get(numberOfPairs - 1);
                 // If existingQuad does not dominate quad
                 // The new departure time is always less or equal than an already stored one
-                if (quad.arrivalTime.isBefore(existingQuad.arrivalTime)) {
+                if (newProfile.arrivalTime.isBefore(existingProfile.arrivalTime)) {
                     // // Log::info("[{connection->getId()}] Updating S: Reach destination from departureStop departing at {quad[self::KEY_DEPARTURE_TIME]} arriving at {quad[self::KEY_ARRIVAL_TIME]}");
-                    if (quad.departureTime.isEqual(existingQuad.departureTime)) {
+                    if (newProfile.departureTime.isEqual(existingProfile.departureTime)) {
                         // Replace existingQuad at the back
                         S.get(connection.getDepartureStationUri()).remove(numberOfPairs - 1);
-                        S.get(connection.getDepartureStationUri()).add(numberOfPairs - 1, quad);
+                        S.get(connection.getDepartureStationUri()).add(numberOfPairs - 1, newProfile);
                     } else {
                         // We're iterating over descending departure times, therefore the departure
                         // Insert at the back
-                        S.get(connection.getDepartureStationUri()).add(quad);
+                        S.get(connection.getDepartureStationUri()).add(newProfile);
                     }
                 }
             } else {
                 // Log::info("[{connection->getId()}] Updating S: New: Reach destination from departureStop departing at {quad[self::KEY_DEPARTURE_TIME]} arriving at {quad[self::KEY_ARRIVAL_TIME]}");
-                S.put(connection.getDepartureStationUri(), new ArrayList<StationQuadruple>());
-                S.get(connection.getDepartureStationUri()).add(quad);
+                S.put(connection.getDepartureStationUri(), new ArrayList<StopProfile>());
+                S.get(connection.getDepartureStationUri()).add(newProfile);
             }
             // ====================================================== //
             // END UPDATE S
@@ -389,10 +389,10 @@ public class RouteResponseListener implements IRailSuccessResponseListener<Linke
         Route[] routes = new Route[S.get(mRoutesRequest.getOrigin().getUri()).size()];
 
         int i = 0;
-        for (StationQuadruple quad : S.get(mRoutesRequest.getOrigin().getUri())
+        for (StopProfile profile : S.get(mRoutesRequest.getOrigin().getUri())
                 ) {
             // it will iterate over all legs
-            StationQuadruple it = quad;
+            StopProfile it = profile;
             List<RouteLeg> legs = new ArrayList<>();
 
             while (!Objects.equals(it.arrivalConnection.getArrivalStationUri(), mRoutesRequest.getDestination().getUri())) {
@@ -436,8 +436,8 @@ public class RouteResponseListener implements IRailSuccessResponseListener<Linke
         mRoutesRequest.notifySuccessListeners(result);
     }
 
-    private StationQuadruple getFirstReachableConnection(StationQuadruple arrivalQuad) {
-        List<StationQuadruple> it_options = S.get(arrivalQuad.arrivalConnection.getArrivalStationUri());
+    private StopProfile getFirstReachableConnection(StopProfile arrivalQuad) {
+        List<StopProfile> it_options = S.get(arrivalQuad.arrivalConnection.getArrivalStationUri());
         int i = it_options.size() - 1;
         // Find the next hop. This is the first reachable hop,
         // or even stricter defined: the hop which will get us to the destination at the same arrival time.
@@ -467,7 +467,7 @@ public class RouteResponseListener implements IRailSuccessResponseListener<Linke
     }
 
 
-    class StationQuadruple {
+    class StopProfile {
         /**
          * The departure time in this stop
          */
@@ -494,7 +494,7 @@ public class RouteResponseListener implements IRailSuccessResponseListener<Linke
         int transfers;
     }
 
-    class TrainTriple {
+    class TrainProfile {
         /**
          * The arrival time at the final destination
          */
