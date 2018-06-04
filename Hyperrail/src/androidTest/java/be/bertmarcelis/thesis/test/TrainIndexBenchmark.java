@@ -354,6 +354,7 @@ public class TrainIndexBenchmark implements IRailErrorResponseListener, IRailSuc
                 e.printStackTrace();
             }
         }
+        StringBuilder resultBuilder = new StringBuilder();
         long min = 5000, max = 0, avg = 0;
         for (String train : done) {
             Duration d = new Duration(start.get(train), end.get(train));
@@ -365,8 +366,9 @@ public class TrainIndexBenchmark implements IRailErrorResponseListener, IRailSuc
                 max = ms;
             }
             avg += ms;
-            Log.e("BENCHMARK", ms + "," + (txEnd.get(train) - txStart.get(train)) + "," + (rxEnd.get(train) - rxStart.get(train)));
+            resultBuilder.append(train).append(",").append(ms).append(",").append(txEnd.get(train) - txStart.get(train)).append(",").append(rxEnd.get(train) - rxStart.get(train)).append("\n");
         }
+        Log.e("BENCHMARK", resultBuilder.toString());
         avg = avg / done.size();
         Log.e("BENCHMARK", "min " + min + " avg " + avg + " max " + max);
     }
@@ -393,7 +395,7 @@ public class TrainIndexBenchmark implements IRailErrorResponseListener, IRailSuc
         Duration d = new Duration(start.get(tag), end.get(tag));
         long ms = d.getMillis();
         free = true;
-        Log.d("BENCHMARK", "ready after " + ms + "ms");
+        Log.d("BENCHMARK", "ready after " + ms +  "," + (txEnd.get(tag) - txStart.get(tag)) + "," + (rxEnd.get(tag) - rxStart.get(tag)));
     }
 }
 

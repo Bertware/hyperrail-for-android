@@ -59,7 +59,7 @@ public class ConnectionsIncrementalResultsBenchmark implements IRailErrorRespons
         final ArrayList<IrailRoutesRequest> requests = new ArrayList<>();
 
         ArrayList<String> querylog = new ArrayList<>();
-
+        Log.w("BENCHMARK", "Loading queries");
         try (InputStream in = InstrumentationRegistry.getContext().getResources().openRawResource(R.raw.irailapi_connections)) {
             java.util.Scanner s = new java.util.Scanner(in).useDelimiter("\\A");
             while (s.hasNextLine()) querylog.add(s.nextLine());
@@ -68,6 +68,7 @@ public class ConnectionsIncrementalResultsBenchmark implements IRailErrorRespons
         }
         IrailStationProvider stationProvider = new StationsDb(InstrumentationRegistry.getTargetContext());
 
+        Log.w("BENCHMARK", "Parsing queries");
         for (String s : querylog) {
             JSONObject json = null;
             try {
@@ -85,9 +86,11 @@ public class ConnectionsIncrementalResultsBenchmark implements IRailErrorRespons
 
         Log.w("BENCHMARK", "LC");
         api = new LinkedConnectionsApi(InstrumentationRegistry.getTargetContext());
+        free = true;
         benchmark(requests);
         Log.w("BENCHMARK", "LC2IRAIL");
         api = new Lc2IrailApi(InstrumentationRegistry.getTargetContext());
+        free = true;
         benchmark(requests);
     }
 
@@ -200,7 +203,7 @@ public class ConnectionsIncrementalResultsBenchmark implements IRailErrorRespons
     public void onErrorResponse(@NonNull Exception e, Object tag) {
         Duration d = new Duration(start.get(tag), DateTime.now().getMillis());
         long ms = d.getMillis();
-        if (mTimeEnd.containsKey(tag) && mTimeEnd.get(tag)[TARGET_RESULTS/2 - 1] > 0) {
+        if (mTimeEnd.containsKey(tag) && mTimeEnd.get(tag)[TARGET_RESULTS / 2 - 1] > 0) {
             done.add((String) tag);
         }
         free = true;
