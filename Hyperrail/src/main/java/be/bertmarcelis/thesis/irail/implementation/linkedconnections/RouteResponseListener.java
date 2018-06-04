@@ -57,7 +57,7 @@ public class RouteResponseListener implements IRailSuccessResponseListener<Linke
     // Each entry in this array is an array of  (departuretime, arrivaltime) pairs, sorted by DESCENDING departuretime
     // A DESCENDING departurtime will ensure we always add to the back of the array, thus saving O(n) operations every time!
     // Note: for journey extraction, 2 data fields will be added. These fields can be ignored for the original Profile Connection Scan Algorithm
-    HashMap<String, List<StopProfile>> S = new HashMap<>();
+    HashMap<String, List<StationStopProfile>> S = new HashMap<>();
 
     // For every trip, keep the earliest possible arrival time
     // The earliest arrival time for the partial journey departing in the earliest scanned connection of the corresponding trip
@@ -170,27 +170,27 @@ public class RouteResponseListener implements IRailSuccessResponseListener<Linke
                 // but arrives as soon as possible
                 // The earliest departure is in the back of the array. This int will keep track of which pair we're evaluating.
                 int position = S.get(connection.getArrivalStationUri()).size() - 1;
-                StopProfile quadruple = S.get(connection.getArrivalStationUri()).get(position);
+                StationStopProfile stopProfile = S.get(connection.getArrivalStationUri()).get(position);
 
                 // TODO: replace hard-coded transfer time
                 // As long as we're arriving AFTER the pair departure, move forward in the list until we find a departure which is reachable
                 // The list is sorted by descending departure time, so the earliest departures are in the back (so we move back to front)
 
-                while ((quadruple.departureTime.getMillis() - 300 * 1000 <= connection.getArrivalTime().getMillis() ||
-                        quadruple.transfers >= maxTransfers) && position > 0) {
+                while ((stopProfile.departureTime.getMillis() - 300 * 1000 <= connection.getArrivalTime().getMillis() ||
+                        stopProfile.transfers >= maxTransfers) && position > 0) {
                     position--;
-                    quadruple = S.get(connection.getArrivalStationUri()).get(position);
+                    stopProfile = S.get(connection.getArrivalStationUri()).get(position);
                 }
-                if (quadruple.departureTime.getMillis() - 300 * 1000 > connection.getArrivalTime().getMillis() && quadruple.transfers <= maxTransfers) {
+                if (stopProfile.departureTime.getMillis() - 300 * 1000 > connection.getArrivalTime().getMillis() && stopProfile.transfers <= maxTransfers) {
                     // If a result was found in the list, this is the earliest arrival time when transferring here
                     // Optional: Adding one second to the arrival time will ensure that the route with the smallest number of legs is chosen.
                     // This would not affect journey extaction, but would prefer routes with less legs when arrival times are identical (as their arrival time will be one second earlier)
                     // It would prefer remaining seated over transferring when both would result in the same arrival time
                     // TODO: increase to 240 -> this way we prefer one less transfer in exchange for 10 minutes longer trip
                     // See http://lc2irail.dev/connections/008822160/008895257/departing/1519924311
-                    T3_transferArrivalTime = new DateTime(quadruple.arrivalTime.getMillis() + 240 * 1000);
+                    T3_transferArrivalTime = new DateTime(stopProfile.arrivalTime.getMillis() + 240 * 1000);
                     // Using this transfer will increase the number of transfers with 1
-                    T3_transfers = quadruple.transfers + 1;
+                    T3_transfers = stopProfile.transfers + 1;
                 } else {
                     // When there isn't a reachable connection, transferring isn't an option
                     T3_transferArrivalTime = infinite;
@@ -282,19 +282,19 @@ public class RouteResponseListener implements IRailSuccessResponseListener<Linke
                     // Create a quadruple to lookup the first reachable connection in S
                     // Create one, because we don't know where we'd get on this train
 
-                    StopProfile stopProfile = new StopProfile();
-                    stopProfile.departureTime = connection.getDepartureTime();
-                    stopProfile.departureConnection = connection;
+                    StationStopProfile stationStopProfile = new StationStopProfile();
+                    stationStopProfile.departureTime = connection.getDepartureTime();
+                    stationStopProfile.departureConnection = connection;
                     // Current situation
-                    stopProfile.arrivalTime = Tmin;
-                    stopProfile.arrivalConnection = currentTrainExit;
+                    stationStopProfile.arrivalTime = Tmin;
+                    stationStopProfile.arrivalConnection = currentTrainExit;
 
-                    Duration currentTransfer = new Duration(currentTrainExit.getArrivalTime(), getFirstReachableConnection(stopProfile).departureTime);
+                    Duration currentTransfer = new Duration(currentTrainExit.getArrivalTime(), getFirstReachableConnection(stationStopProfile).departureTime);
 
                     // New situation
-                    stopProfile.arrivalTime = Tmin;
-                    stopProfile.arrivalConnection = exitTrainConnection;
-                    Duration newTransfer = new Duration(exitTrainConnection.getArrivalTime(), getFirstReachableConnection(stopProfile).departureTime);
+                    stationStopProfile.arrivalTime = Tmin;
+                    stationStopProfile.arrivalConnection = exitTrainConnection;
+                    Duration newTransfer = new Duration(exitTrainConnection.getArrivalTime(), getFirstReachableConnection(stationStopProfile).departureTime);
 
                     // If the new situation is better
                     if (newTransfer.isLongerThan(currentTransfer)) {
@@ -337,7 +337,7 @@ public class RouteResponseListener implements IRailSuccessResponseListener<Linke
             // ====================================================== //
 
             // Create a stopProfile to update S
-            StopProfile newProfile = new StopProfile();
+            StationStopProfile newProfile = new StationStopProfile();
             newProfile.departureTime = connection.getDepartureTime();
             newProfile.arrivalTime = Tmin;
             // Additional data for journey extraction
@@ -346,7 +346,7 @@ public class RouteResponseListener implements IRailSuccessResponseListener<Linke
             newProfile.transfers = numberOfTransfers;
             if (S.containsKey(connection.getDepartureStationUri())) {
                 int numberOfPairs = S.get(connection.getDepartureStationUri()).size();
-                StopProfile existingProfile = S.get(connection.getDepartureStationUri()).get(numberOfPairs - 1);
+                StationStopProfile existingProfile = S.get(connection.getDepartureStationUri()).get(numberOfPairs - 1);
                 // If existingQuad does not dominate quad
                 // The new departure time is always less or equal than an already stored one
                 if (newProfile.arrivalTime.isBefore(existingProfile.arrivalTime)) {
@@ -363,7 +363,7 @@ public class RouteResponseListener implements IRailSuccessResponseListener<Linke
                 }
             } else {
                 // Log::info("[{connection->getId()}] Updating S: New: Reach destination from departureStop departing at {quad[self::KEY_DEPARTURE_TIME]} arriving at {quad[self::KEY_ARRIVAL_TIME]}");
-                S.put(connection.getDepartureStationUri(), new ArrayList<StopProfile>());
+                S.put(connection.getDepartureStationUri(), new ArrayList<StationStopProfile>());
                 S.get(connection.getDepartureStationUri()).add(newProfile);
             }
             // ====================================================== //
@@ -389,10 +389,10 @@ public class RouteResponseListener implements IRailSuccessResponseListener<Linke
         Route[] routes = new Route[S.get(mRoutesRequest.getOrigin().getUri()).size()];
 
         int i = 0;
-        for (StopProfile profile : S.get(mRoutesRequest.getOrigin().getUri())
+        for (StationStopProfile profile : S.get(mRoutesRequest.getOrigin().getUri())
                 ) {
             // it will iterate over all legs
-            StopProfile it = profile;
+            StationStopProfile it = profile;
             List<RouteLeg> legs = new ArrayList<>();
 
             while (!Objects.equals(it.arrivalConnection.getArrivalStationUri(), mRoutesRequest.getDestination().getUri())) {
@@ -436,8 +436,8 @@ public class RouteResponseListener implements IRailSuccessResponseListener<Linke
         mRoutesRequest.notifySuccessListeners(result);
     }
 
-    private StopProfile getFirstReachableConnection(StopProfile arrivalQuad) {
-        List<StopProfile> it_options = S.get(arrivalQuad.arrivalConnection.getArrivalStationUri());
+    private StationStopProfile getFirstReachableConnection(StationStopProfile arrivalQuad) {
+        List<StationStopProfile> it_options = S.get(arrivalQuad.arrivalConnection.getArrivalStationUri());
         int i = it_options.size() - 1;
         // Find the next hop. This is the first reachable hop,
         // or even stricter defined: the hop which will get us to the destination at the same arrival time.
@@ -467,7 +467,7 @@ public class RouteResponseListener implements IRailSuccessResponseListener<Linke
     }
 
 
-    class StopProfile {
+    class StationStopProfile {
         /**
          * The departure time in this stop
          */
