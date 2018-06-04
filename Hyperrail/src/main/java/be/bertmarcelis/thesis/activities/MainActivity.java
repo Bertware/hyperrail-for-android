@@ -76,7 +76,8 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
     private boolean mDualPane = false;
 
     // Define this as an enumeration type, so compilers can give better advice on possible errors
-    @IntDef({VIEW_TYPE_LIVEBOARD, VIEW_TYPE_ROUTE, VIEW_TYPE_DISTURBANCE, VIEW_TYPE_TRAIN, VIEW_TYPE_SETTINGS, VIEW_TYPE_FEEDBACK})
+    @IntDef({VIEW_TYPE_LIVEBOARD, VIEW_TYPE_ROUTE, VIEW_TYPE_DISTURBANCE, VIEW_TYPE_TRAIN,
+            VIEW_TYPE_SETTINGS, VIEW_TYPE_FEEDBACK})
     public @interface ViewType {
     }
 
@@ -297,6 +298,9 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
             case R.id.action_test2:
                 PreferenceManager.getDefaultSharedPreferences(this).edit().putString("api", "lc").apply();
                 IrailFactory.setup(this);
+                break;
+            case R.id.action_store:
+                IrailFactory.logMeteredApiData(this, false);
                 break;
             case R.id.action_battery_test:
                 Intent i = new Intent(this, BatteryTestActivity.class);

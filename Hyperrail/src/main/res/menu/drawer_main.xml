@@ -41,6 +41,11 @@
                     android:title="@string/test_version_2"
                     app:showAsAction="ifRoom|collapseActionView" />
                 <item
+                    android:id="@+id/action_store"
+                    android:icon="@drawable/ic_info_outline"
+                    android:title="@string/store_test_results"
+                    app:showAsAction="ifRoom|collapseActionView" />
+                <item
                     android:id="@+id/action_battery_test"
                     android:icon="@drawable/ic_battery_60"
                     android:title="Benchmark battery"
