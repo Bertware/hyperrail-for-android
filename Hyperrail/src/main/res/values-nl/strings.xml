@@ -136,7 +136,7 @@
     <string name="station_details_not_available_title">Informatie niet beschikbaar</string>
     <string name="station_not_found">Station niet gevonden</string>
     <string name="widget_error_cant_load">Gegevens kunnen niet geladen worden.\\n Verwijder dit widget en probeer opnieuw.</string>
-    <string name="test_version_2">Test versie 2</string>
-    <string name="test_version_1">Test versie 1</string>
+    <string name="test_version_2">Test Linked Connections</string>
+    <string name="test_version_1">Test LC2Irail</string>
     <string name="store_test_results">Testresultaten opslaan</string>
 </resources>
