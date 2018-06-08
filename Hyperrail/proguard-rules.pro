@@ -15,6 +15,7 @@
 #-keepclassmembers class fqcn.of.javascript.interface.for.webview {
 #   public *;
 #}
+-ignorewarnings
 -keepattributes SourceFile,LineNumberTable
 -dontwarn org.joda.convert.**
 -dontwarn org.joda.time.**
@@ -26,7 +27,7 @@
 -dontwarn javax.annotation.**
 -dontwarn org.conscrypt.**
 # A resource is loaded with a relative path so the package of this class must be preserved.
--keepnames class okhttp3.internal.publicsuffix.PublicSuffixDatabase
+-keepnames class okhttp3.*
 
 
 -keep class com.bluelinelabs.logansquare.** { *; }
