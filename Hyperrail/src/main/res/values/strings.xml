@@ -134,6 +134,6 @@
     <string name="station_not_found">Station not found</string>
     <string name="widget_error_cant_load">Can\'t load data.\n Remove this widget and try again.</string>
     <string name="store_test_results">Store test results</string>
-    <string name="test_version_2">Test version 2</string>
-    <string name="test_version_1">Test version 1</string>
+    <string name="test_version_2">Test Linked Connections</string>
+    <string name="test_version_1">Test LC2Irail</string>
 </resources>
